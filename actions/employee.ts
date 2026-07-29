@@ -1,0 +1,468 @@
+'use server';
+
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
+import { revalidatePath } from 'next/cache';
+import ExcelJS from 'exceljs';
+import { validateEmployeeData } from '@/lib/validation';
+
+export async function getEmployees({
+  search = '',
+  department = '',
+  status = '',
+  page = 1,
+  pageSize = 10,
+}: {
+  search?: string;
+  department?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const session = await getSession();
+  if (!session || session.role !== 'HR_ADMIN') {
+    throw new Error('Unauthorized');
+  }
+
+  const where: any = {
+    isDeleted: false,
+  };
+
+  if (search.trim()) {
+    const q = search.trim();
+    where.OR = [
+      { employeeId: { contains: q } },
+      { firstName: { contains: q } },
+      { lastName: { contains: q } },
+      { email: { contains: q } },
+      { designation: { contains: q } },
+      { office: { contains: q } },
+    ];
+  }
+
+  if (department && department !== 'ALL') {
+    where.department = department;
+  }
+
+  if (status && status !== 'ALL') {
+    where.status = status;
+  }
+
+  const total = await prisma.employee.count({ where });
+  const employees = await prisma.employee.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    include: {
+      lessonProgresses: {
+        where: { isCompleted: true },
+      },
+      assessmentAttempts: {
+        orderBy: { score: 'desc' },
+        take: 1,
+      },
+      certificates: true,
+    },
+  });
+
+  const deptRecords = await prisma.employee.findMany({
+    where: { isDeleted: false },
+    select: { department: true },
+    distinct: ['department'],
+    orderBy: { department: 'asc' },
+  });
+  const departments = deptRecords.map((d) => d.department).filter(Boolean);
+
+  return {
+    employees,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+    page,
+    departments,
+  };
+}
+
+export async function getEmployeeById(id: string) {
+  const session = await getSession();
+  if (!session || session.role !== 'HR_ADMIN') {
+    throw new Error('Unauthorized');
+  }
+
+  const employee = await prisma.employee.findUnique({
+    where: { id },
+    include: {
+      lessonProgresses: {
+        include: { lesson: true },
+      },
+      assessmentAttempts: {
+        orderBy: { submittedAt: 'desc' },
+      },
+      certificates: true,
+      activityLogs: {
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      },
+    },
+  });
+
+  return employee;
+}
+
+export async function saveEmployee(data: {
+  id?: string;
+  employeeId: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+  department: string;
+  designation: string;
+  office: string;
+  joiningDate: string;
+  status: string;
+}) {
+  const session = await getSession();
+  if (!session || session.role !== 'HR_ADMIN') {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const validation = validateEmployeeData({
+      firstName: data.firstName,
+      middleName: data.middleName,
+      lastName: data.lastName,
+      email: data.email,
+      department: data.department,
+      joiningDate: data.joiningDate,
+    });
+
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const joiningDate = new Date(data.joiningDate);
+    const cleanEmpId = data.employeeId.trim().toUpperCase();
+
+    if (data.id) {
+      // Update
+      const existing = await prisma.employee.findFirst({
+        where: {
+          NOT: { id: data.id },
+          OR: [{ employeeId: cleanEmpId }, { email: data.email.trim() }],
+        },
+      });
+
+      if (existing) {
+        return { success: false, error: 'Employee ID or Email already exists for another record.' };
+      }
+
+      await prisma.employee.update({
+        where: { id: data.id },
+        data: {
+          employeeId: cleanEmpId,
+          firstName: data.firstName.trim(),
+          middleName: data.middleName?.trim() || null,
+          lastName: data.lastName.trim(),
+          email: data.email.trim(),
+          department: data.department.trim(),
+          designation: data.designation.trim(),
+          office: data.office.trim(),
+          joiningDate,
+          status: data.status,
+        },
+      });
+    } else {
+      // Create
+      const existing = await prisma.employee.findFirst({
+        where: {
+          OR: [{ employeeId: cleanEmpId }, { email: data.email.trim() }],
+        },
+      });
+
+      if (existing) {
+        return { success: false, error: 'Employee ID or Email already exists.' };
+      }
+
+      await prisma.employee.create({
+        data: {
+          employeeId: cleanEmpId,
+          firstName: data.firstName.trim(),
+          middleName: data.middleName?.trim() || null,
+          lastName: data.lastName.trim(),
+          email: data.email.trim(),
+          department: data.department.trim(),
+          designation: data.designation.trim(),
+          office: data.office.trim(),
+          joiningDate,
+          status: data.status || 'ACTIVE',
+        },
+      });
+    }
+
+    revalidatePath('/hr/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to save employee.' };
+  }
+}
+
+export async function deleteEmployee(id: string) {
+  const session = await getSession();
+  if (!session || session.role !== 'HR_ADMIN') {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    await prisma.employee.update({
+      where: { id },
+      data: { isDeleted: true },
+    });
+    revalidatePath('/hr/employees');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: 'Failed to delete employee.' };
+  }
+}
+
+export async function exportEmployeesToExcel() {
+  const session = await getSession();
+  if (!session || session.role !== 'HR_ADMIN') {
+    throw new Error('Unauthorized');
+  }
+
+  const employees = await prisma.employee.findMany({
+    where: { isDeleted: false },
+    orderBy: { employeeId: 'asc' },
+    include: {
+      certificates: true,
+      assessmentAttempts: {
+        where: { passed: true },
+        take: 1,
+      },
+    },
+  });
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Employees');
+
+  sheet.columns = [
+    { header: 'Employee ID', key: 'employeeId', width: 15 },
+    { header: 'First Name', key: 'firstName', width: 15 },
+    { header: 'Middle Name', key: 'middleName', width: 15 },
+    { header: 'Last Name', key: 'lastName', width: 15 },
+    { header: 'Email', key: 'email', width: 25 },
+    { header: 'Department', key: 'department', width: 20 },
+    { header: 'Designation', key: 'designation', width: 20 },
+    { header: 'Office Location', key: 'office', width: 20 },
+    { header: 'Joining Date', key: 'joiningDate', width: 15 },
+    { header: 'Status', key: 'status', width: 12 },
+    { header: 'Assessment Score (%)', key: 'score', width: 20 },
+    { header: 'Certificate Status', key: 'certificateStatus', width: 20 },
+  ];
+
+  // Header styling
+  sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
+  sheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: '0F172A' },
+  };
+
+  employees.forEach((emp) => {
+    const topScore = emp.assessmentAttempts[0]?.score ?? 'N/A';
+    const certStatus = emp.certificates.length > 0 ? 'Issued' : 'Pending';
+
+    sheet.addRow({
+      employeeId: emp.employeeId,
+      firstName: emp.firstName,
+      middleName: emp.middleName || '',
+      lastName: emp.lastName,
+      email: emp.email,
+      department: emp.department,
+      designation: emp.designation,
+      office: emp.office,
+      joiningDate: emp.joiningDate.toISOString().split('T')[0],
+      status: emp.status,
+      score: topScore,
+      certificateStatus: certStatus,
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return (buffer as any).toString('base64');
+}
+
+export async function importEmployeesFromExcel(base64Content: string) {
+  const session = await getSession();
+  if (!session || session.role !== 'HR_ADMIN') {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const buffer = Buffer.from(base64Content, 'base64');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+
+    const sheet = workbook.getWorksheet(1);
+    if (!sheet) {
+      return { success: false, error: 'Excel file is empty or missing worksheet.' };
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    const errors: string[] = [];
+
+    // Skip header row
+    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber++) {
+      const row = sheet.getRow(rowNumber);
+      const empId = row.getCell(1).text.trim().toUpperCase();
+      const firstName = row.getCell(2).text.trim();
+      const middleName = row.getCell(3).text.trim();
+      const lastName = row.getCell(4).text.trim();
+      const email = row.getCell(5).text.trim();
+      const department = row.getCell(6).text.trim();
+      const designation = row.getCell(7).text.trim();
+      const office = row.getCell(8).text.trim();
+      const joiningDateText = row.getCell(9).text.trim();
+      const statusText = row.getCell(10).text.trim().toUpperCase() || 'ACTIVE';
+
+      if (!empId || !firstName || !lastName || !email) {
+        errors.push(`Row ${rowNumber}: Required fields (Employee ID, First Name, Last Name, Email) missing.`);
+        continue;
+      }
+
+      const joiningDate = joiningDateText ? new Date(joiningDateText) : new Date();
+
+      const validation = validateEmployeeData({
+        firstName,
+        middleName,
+        lastName,
+        email,
+        department: department || 'General',
+        joiningDate,
+      });
+
+      if (!validation.isValid) {
+        errors.push(`Row ${rowNumber} (${empId}): ${validation.error}`);
+        continue;
+      }
+
+      try {
+        const existing = await prisma.employee.findUnique({
+          where: { employeeId: empId },
+        });
+
+        if (existing) {
+          await prisma.employee.update({
+            where: { id: existing.id },
+            data: {
+              firstName,
+              middleName: middleName || null,
+              lastName,
+              email,
+              department: department || existing.department,
+              designation: designation || existing.designation,
+              office: office || existing.office,
+              joiningDate,
+              status: statusText === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+            },
+          });
+          updatedCount++;
+        } else {
+          await prisma.employee.create({
+            data: {
+              employeeId: empId,
+              firstName,
+              middleName: middleName || null,
+              lastName,
+              email,
+              department: department || 'General',
+              designation: designation || 'Staff',
+              office: office || 'Corporate HQ',
+              joiningDate,
+              status: statusText === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+            },
+          });
+          createdCount++;
+        }
+      } catch (err: any) {
+        errors.push(`Row ${rowNumber} (${empId}): ${err.message}`);
+      }
+    }
+
+    revalidatePath('/hr/employees');
+    return {
+      success: true,
+      createdCount,
+      updatedCount,
+      errors,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to process Excel file.' };
+  }
+}
+
+export async function generateEmployeeImportTemplate() {
+  const session = await getSession();
+  if (!session || session.role !== 'HR_ADMIN') {
+    throw new Error('Unauthorized');
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Employee Import Template');
+
+  sheet.columns = [
+    { header: 'EmployeeID', key: 'employeeId', width: 16 },
+    { header: 'FirstName', key: 'firstName', width: 16 },
+    { header: 'MiddleName', key: 'middleName', width: 14 },
+    { header: 'LastName', key: 'lastName', width: 16 },
+    { header: 'Email', key: 'email', width: 28 },
+    { header: 'Department', key: 'department', width: 20 },
+    { header: 'Designation', key: 'designation', width: 22 },
+    { header: 'Office', key: 'office', width: 20 },
+    { header: 'JoiningDate', key: 'joiningDate', width: 16 },
+    { header: 'Status', key: 'status', width: 12 },
+  ];
+
+  // Header styling
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: '0F172A' },
+  };
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Add sample rows to guide user on format
+  sheet.addRow({
+    employeeId: 'EMP1010',
+    firstName: 'Sarah',
+    middleName: 'A.',
+    lastName: 'Connor',
+    email: 'sarah.connor@corporate.com',
+    department: 'Engineering',
+    designation: 'Software Engineer',
+    office: 'Corporate HQ',
+    joiningDate: todayStr,
+    status: 'ACTIVE',
+  });
+
+  sheet.addRow({
+    employeeId: 'EMP1011',
+    firstName: 'Michael',
+    middleName: '',
+    lastName: 'Scott',
+    email: 'michael.scott@corporate.com',
+    department: 'Human Resources',
+    designation: 'HR Specialist',
+    office: 'Scranton Branch',
+    joiningDate: todayStr,
+    status: 'ACTIVE',
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  return (buffer as any).toString('base64');
+}
