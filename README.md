@@ -1,4 +1,13 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Corporate Employee Induction LMS Portal
+
+Enterprise Learning Management System built with Next.js 16, TypeScript, Tailwind CSS, Prisma ORM, and ExcelJS.
+
+## Features
+- **HR Onboarding & Directory**: Manage employee profiles with full name, department, designation, and joining date validations.
+- **Dynamic Department Filtering**: Real-time department filtering populated from employee database.
+- **Excel Bulk Import & Export**: Automated Excel import/export with downloadable template.
+- **Interactive Anti-Skip Video Player**: Anti-skip protected video lesson player with YouTube integration.
+- **Certificates & Compliance Analytics**: Instant PDF certificate generation and compliance reporting.
 
 ## Getting Started
 
