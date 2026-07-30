@@ -33,6 +33,10 @@ function LoginFormContent() {
         setError(res.error || 'Login failed.');
       }
     } catch (err: any) {
+      if (err?.message?.includes('was not found on the server') || err?.message?.includes('Server Action')) {
+        window.location.reload();
+        return;
+      }
       setError(err.message || 'An error occurred.');
     } finally {
       setLoading(false);
@@ -43,7 +47,7 @@ function LoginFormContent() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
+    
     const formData = new FormData();
     formData.append('username', hrUsername);
     formData.append('password', hrPassword);
@@ -56,6 +60,10 @@ function LoginFormContent() {
         setError(res.error || 'Login failed.');
       }
     } catch (err: any) {
+      if (err?.message?.includes('was not found on the server') || err?.message?.includes('Server Action')) {
+        window.location.reload();
+        return;
+      }
       setError(err.message || 'An error occurred.');
     } finally {
       setLoading(false);
