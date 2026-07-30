@@ -224,23 +224,32 @@ export default async function HRDashboardPage() {
               Configure course structures, manage department rules, and export organization compliance reports.
             </p>
 
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2.5 pt-1">
               <Link href="/hr/departments" className="block">
-                <Button variant="secondary" fullWidth icon={Building2} iconPosition="left" className="justify-between bg-slate-800 hover:bg-slate-700">
-                  <span>Manage Departments</span>
-                  <ArrowRight className="w-4 h-4 text-slate-400" />
+                <Button variant="secondary" fullWidth size="lg" className="w-full flex items-center justify-between px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <Building2 className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span className="font-semibold text-xs sm:text-sm">Manage Departments</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-400 shrink-0" />
                 </Button>
               </Link>
               <Link href="/hr/course" className="block">
-                <Button variant="secondary" fullWidth icon={BookOpen} iconPosition="left" className="justify-between bg-slate-800 hover:bg-slate-700">
-                  <span>Curriculum & SharePoint Links</span>
-                  <ArrowRight className="w-4 h-4 text-slate-400" />
+                <Button variant="secondary" fullWidth size="lg" className="w-full flex items-center justify-between px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span className="font-semibold text-xs sm:text-sm">Curriculum & SharePoint Links</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-400 shrink-0" />
                 </Button>
               </Link>
               <Link href="/hr/reports" className="block">
-                <Button variant="primary" fullWidth icon={FileSpreadsheet} iconPosition="left" className="justify-between">
-                  <span>Export Compliance Excel</span>
-                  <ArrowRight className="w-4 h-4" />
+                <Button variant="primary" fullWidth size="lg" className="w-full flex items-center justify-between px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-soft-md">
+                  <div className="flex items-center gap-3">
+                    <FileSpreadsheet className="w-4 h-4 text-white shrink-0" />
+                    <span className="font-semibold text-xs sm:text-sm">Export Compliance Excel</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-white shrink-0" />
                 </Button>
               </Link>
             </div>

@@ -53,7 +53,7 @@ export function Button({
         <Icon className="w-4 h-4 shrink-0" />
       ) : null}
 
-      {children && <span>{children}</span>}
+      {children}
 
       {!loading && Icon && iconPosition === 'right' ? (
         <Icon className="w-4 h-4 shrink-0" />
