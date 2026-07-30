@@ -81,8 +81,22 @@ export default function HRReportsPage() {
   });
 
   const totalCertified = reportRows.filter((r) => r.isCompleted).length;
-  const avgScore = reportRows.length > 0
-    ? Math.round(reportRows.reduce((acc, r) => acc + (r.bestScore || 0), 0) / reportRows.length)
+  
+  const validScores = reportRows
+    .map((r) => {
+      if (typeof r.bestScoreNum === 'number' && r.bestScoreNum !== null && (r.hasAttempt || r.bestScoreNum > 0)) {
+        return r.bestScoreNum;
+      }
+      if (typeof r.bestScore === 'string' && r.bestScore !== 'N/A') {
+        const parsed = parseFloat(r.bestScore.replace('%', ''));
+        return isNaN(parsed) ? null : parsed;
+      }
+      return null;
+    })
+    .filter((score): score is number => score !== null);
+
+  const avgScore = validScores.length > 0
+    ? Math.round(validScores.reduce((acc, val) => acc + val, 0) / validScores.length)
     : 0;
 
   const columns: Column<any>[] = [
@@ -131,7 +145,7 @@ export default function HRReportsPage() {
       key: 'bestScore',
       header: 'Best Score',
       align: 'center',
-      render: (row) => <span className="font-bold text-blue-600 font-mono">{row.bestScore}%</span>,
+      render: (row) => <span className="font-bold text-blue-600 font-mono">{row.bestScore}</span>,
     },
     {
       key: 'certificateStatus',

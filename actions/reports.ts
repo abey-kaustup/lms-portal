@@ -149,7 +149,9 @@ export async function getHRDetailedReport(departmentFilter?: string) {
       totalLessons: assignedLessonsTotal,
       isCompleted,
       attemptsCount,
-      bestScore: attemptsCount > 0 ? `${bestAttempt}%` : 'N/A',
+      hasAttempt: attemptsCount > 0,
+      bestScoreNum: attemptsCount > 0 ? Math.round(bestAttempt) : null,
+      bestScore: attemptsCount > 0 ? `${Math.round(bestAttempt)}%` : 'N/A',
       lastAttemptDate: lastAttempt ? lastAttempt.submittedAt.toISOString().split('T')[0] : 'N/A',
       certificateStatus: isCompleted ? 'Issued' : 'Pending',
     };
