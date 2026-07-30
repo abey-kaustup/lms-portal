@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, ShieldCheck, AlertCircle, CheckCircle } from 'lucide-react';
+import { Play, Pause, RotateCcw, ShieldCheck, AlertCircle, CheckCircle, Maximize, Minimize } from 'lucide-react';
 
 interface AntiSkipVideoPlayerProps {
   videoUrl: string;
@@ -30,14 +30,45 @@ export function AntiSkipVideoPlayer({
   onComplete,
   isCompleted = false,
 }: AntiSkipVideoPlayerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [maxWatchedTime, setMaxWatchedTime] = useState(initialWatchedSeconds);
   const [completed, setCompleted] = useState(isCompleted);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const youtubeEmbedUrl = getYouTubeEmbedUrl(videoUrl);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      if (containerRef.current.requestFullscreen) {
+        containerRef.current.requestFullscreen();
+      } else if ((containerRef.current as any).webkitRequestFullscreen) {
+        (containerRef.current as any).webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   // Resume from last watched timestamp on metadata load
   const handleLoadedMetadata = () => {
@@ -121,7 +152,7 @@ export function AntiSkipVideoPlayer({
   // Render YouTube Iframe Player if YouTube URL
   if (youtubeEmbedUrl) {
     return (
-      <div className="w-full bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-800">
+      <div ref={containerRef} className="w-full bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-800">
         <div className="relative aspect-video bg-black flex items-center justify-center">
           <iframe
             src={youtubeEmbedUrl}
@@ -149,17 +180,27 @@ export function AntiSkipVideoPlayer({
             Watch the video and click completed when you finish.
           </p>
 
-          <button
-            onClick={() => {
-              setCompleted(true);
-              onComplete();
-              onProgressUpdate(100, 100, true);
-            }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0"
-          >
-            <CheckCircle className="w-4 h-4" />
-            <span>{completed ? 'Lesson Completed' : 'Mark as Completed'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1.5 text-xs font-medium"
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+            </button>
+            <button
+              onClick={() => {
+                setCompleted(true);
+                onComplete();
+                onProgressUpdate(100, 100, true);
+              }}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span>{completed ? 'Lesson Completed' : 'Mark as Completed'}</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -167,7 +208,7 @@ export function AntiSkipVideoPlayer({
 
   // Native HTML5 Video Player
   return (
-    <div className="w-full bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-800">
+    <div ref={containerRef} className="w-full bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-800">
       {/* SharePoint / Video Player Container */}
       <div className="relative aspect-video bg-black flex items-center justify-center">
         <video
@@ -245,6 +286,13 @@ export function AntiSkipVideoPlayer({
                 {watchedPercentage}%
               </p>
             </div>
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1 text-xs"
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            </button>
           </div>
         </div>
 
