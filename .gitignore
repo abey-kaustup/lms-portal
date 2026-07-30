@@ -41,7 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # sqlite
-prisma/*.db
+!prisma/dev.db
 prisma/*.db-journal
 
 # scratch
