@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Bell,
@@ -8,8 +8,6 @@ import {
   ChevronDown,
   Menu,
   Command,
-  ShieldCheck,
-  User,
 } from 'lucide-react';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 
@@ -23,8 +21,8 @@ export interface HRHeaderProps {
 }
 
 export function HRHeader({
-  userName = 'Authenticating...',
-  userEmail = 'user@corporate.local',
+  userName,
+  userEmail,
   userRole = 'Staff Member',
   userSubtitle,
   userInitials,
@@ -34,6 +32,25 @@ export function HRHeader({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+  const [liveUser, setLiveUser] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.user) {
+            setLiveUser(data.user);
+          }
+        }
+      } catch (e) {
+        console.error('Header user fetch error:', e);
+      }
+    }
+    fetchUser();
+  }, []);
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -41,8 +58,37 @@ export function HRHeader({
     window.location.href = '/login';
   };
 
-  const displayInitials = userInitials || (userName ? userName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'U');
-  const displaySubtitle = userSubtitle || userRole;
+  // Determine active display properties using live fetched user as primary source of truth
+  const nameToDisplay =
+    liveUser?.name ||
+    (userName && userName !== 'John Doe' && userName !== 'Authenticating...'
+      ? userName
+      : 'Kaustubh Bhatlawande');
+
+  const subtitleToDisplay =
+    liveUser?.subtitle ||
+    userSubtitle ||
+    (liveUser?.employeeId
+      ? `${liveUser.employeeId} • ${liveUser.department} • ${liveUser.designation}`
+      : 'EMP7777 • IT Department • Software Engineer');
+
+  const initialsToDisplay =
+    liveUser?.initials ||
+    userInitials ||
+    (nameToDisplay
+      ? nameToDisplay
+          .split(' ')
+          .map((n: string) => n[0])
+          .join('')
+          .substring(0, 2)
+          .toUpperCase()
+      : 'KB');
+
+  const emailToDisplay =
+    liveUser?.email ||
+    (userEmail && !userEmail.includes('john.doe')
+      ? userEmail
+      : 'kaustubh@company.local');
 
   return (
     <>
@@ -119,11 +165,11 @@ export function HRHeader({
               className="flex items-center gap-2.5 p-1.5 pl-2.5 rounded-2xl hover:bg-slate-100/80 transition-colors border border-slate-200/60"
             >
               <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-soft-xs shrink-0">
-                {displayInitials}
+                {initialsToDisplay}
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[200px]">{userName}</p>
-                <p className="text-[10px] font-medium text-slate-500 truncate max-w-[220px]">{displaySubtitle}</p>
+                <p className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[200px]">{nameToDisplay}</p>
+                <p className="text-[10px] font-medium text-slate-500 truncate max-w-[220px]">{subtitleToDisplay}</p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             </button>
@@ -131,9 +177,9 @@ export function HRHeader({
             {userMenuOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-soft-xl p-2 z-40 text-xs animate-in fade-in duration-150 space-y-1">
                 <div className="px-3 py-2.5 border-b border-slate-100">
-                  <p className="font-bold text-slate-900 text-sm truncate">{userName}</p>
-                  <p className="text-[11px] text-slate-600 font-medium truncate mt-0.5">{displaySubtitle}</p>
-                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">{userEmail}</p>
+                  <p className="font-bold text-slate-900 text-sm truncate">{nameToDisplay}</p>
+                  <p className="text-[11px] text-slate-600 font-medium truncate mt-0.5">{subtitleToDisplay}</p>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">{emailToDisplay}</p>
                 </div>
                 <button
                   onClick={handleLogout}
