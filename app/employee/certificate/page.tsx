@@ -7,7 +7,18 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
-import { Download, ArrowLeft, Printer } from 'lucide-react';
+import {
+  Download,
+  ArrowLeft,
+  Printer,
+  ShieldCheck,
+  Award,
+  CheckCircle2,
+  Sparkles,
+  Building2,
+  User,
+  Calendar,
+} from 'lucide-react';
 
 export default function EmployeeCertificatePage() {
   const { showToast } = useToast();
@@ -42,23 +53,34 @@ export default function EmployeeCertificatePage() {
         useCORS: true,
         logging: false,
         backgroundColor: '#FFFFFF',
+        width: 800,
+        height: 1131,
       });
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
-        orientation: 'landscape',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
       });
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pdfWidth = 210;
+      const pdfHeight = 297;
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Certificate_${certData.employee.employeeId}.pdf`);
+
+      // Clean filename format: Firstname_Lastname_Certificate.pdf
+      const cleanFirstName = (certData.employee.firstName || 'Employee').replace(/[^a-zA-Z0-9]/g, '');
+      const cleanLastName = (certData.employee.lastName || '').replace(/[^a-zA-Z0-9]/g, '');
+      const filename = cleanLastName
+        ? `${cleanFirstName}_${cleanLastName}_Certificate.pdf`
+        : `${cleanFirstName}_Certificate.pdf`;
+
+      pdf.save(filename);
 
       showToast('Executive Certificate PDF downloaded successfully!', 'success');
     } catch (err: any) {
+      console.error('PDF export error:', err);
       showToast('Failed to generate PDF download', 'error');
     } finally {
       setDownloading(false);
@@ -70,7 +92,7 @@ export default function EmployeeCertificatePage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-slate-500">Loading Executive Certificate...</p>
+          <p className="text-xs font-semibold text-slate-500">Loading Official Certificate...</p>
         </div>
       </div>
     );
@@ -79,13 +101,16 @@ export default function EmployeeCertificatePage() {
   if (!certData) {
     return (
       <div className="p-8 bg-white rounded-3xl text-center border border-slate-200 shadow-soft-xs max-w-xl mx-auto space-y-4">
+        <div className="w-12 h-12 bg-amber-50 rounded-2xl text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+          <Award className="w-6 h-6" />
+        </div>
         <h3 className="text-lg font-bold text-slate-900">Certificate Pending</h3>
         <p className="text-xs text-slate-500 font-medium">
-          Your official certificate will be issued automatically once you pass the final induction assessment.
+          Your official corporate certificate will be issued automatically once you pass the final induction assessment.
         </p>
         <Link href="/employee/assessment">
           <Button variant="primary">
-            Go to Assessment
+            Go to Assessment Test
           </Button>
         </Link>
       </div>
@@ -104,8 +129,37 @@ export default function EmployeeCertificatePage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Top Action Bar */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200/80 shadow-soft-xs">
+      {/* Embedded CSS for perfect A4 Print Layout */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #printable-certificate, #printable-certificate * {
+            visibility: visible !important;
+          }
+          #printable-certificate {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 210mm !important;
+            height: 297mm !important;
+            margin: 0 !important;
+            padding: 15mm !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            transform: none !important;
+            background: #ffffff !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+        }
+      `}</style>
+
+      {/* Top Action Bar (Hidden during print) */}
+      <div className="flex flex-wrap items-center justify-between bg-white p-4 rounded-2xl border border-slate-200/80 shadow-soft-xs gap-3 print:hidden">
         <Link href="/employee/dashboard">
           <Button variant="ghost" size="sm" icon={ArrowLeft}>
             Back to Dashboard
@@ -114,7 +168,7 @@ export default function EmployeeCertificatePage() {
 
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" icon={Printer} onClick={() => window.print()}>
-            Print
+            Print Certificate
           </Button>
           <Button variant="secondary" size="sm" icon={Download} loading={downloading} onClick={handleDownloadPDF}>
             Download PDF (A4)
@@ -122,112 +176,181 @@ export default function EmployeeCertificatePage() {
         </div>
       </div>
 
-      {/* Minimal Executive Corporate Certificate with Larger Typography & Completion/Passing Metrics */}
-      <div
-        ref={certRef}
-        className="w-full bg-[#FFFFFF] relative overflow-hidden shadow-soft-xl rounded-xl p-8 sm:p-14 md:p-16 text-[#444444] border-3 border-[#1B2A49] select-none font-sans"
-        style={{ aspectRatio: '1.414 / 1' }}
-      >
-        {/* Subtle Light Gray Paper Grain Background Texture */}
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_0.9px,transparent_0.9px)] [background-size:16px_16px] opacity-40 pointer-events-none" />
+      {/* RESPONSIVE SCALING CONTAINER FOR PREVIEW */}
+      <div className="w-full flex items-center justify-center overflow-x-auto pb-4">
+        {/*
+          EXECUTIVE A4 PORTRAIT CERTIFICATE (Fixed 800px x 1131px for 100% pixel-perfect A4 printing & PDF capture)
+        */}
+        <div
+          id="printable-certificate"
+          ref={certRef}
+          className="w-[800px] h-[1131px] bg-white relative overflow-hidden text-slate-800 shadow-2xl rounded-sm border-[12px] border-[#0F172A] p-12 flex flex-col justify-between select-none font-sans shrink-0"
+        >
+          {/* Background Subtle Watermark Texture */}
+          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px] opacity-40 pointer-events-none" />
 
-        {/* Thin Gold Inner Border Frame */}
-        <div className="absolute inset-3.5 border-2 border-[#C9A227] pointer-events-none rounded-lg" />
+          {/* Double Gold Inner Border Frame */}
+          <div className="absolute inset-4 border-2 border-[#C9A227] pointer-events-none rounded-xs" />
+          <div className="absolute inset-6 border border-[#C9A227]/40 pointer-events-none rounded-xs" />
 
-        {/* MAIN CERTIFICATE LAYOUT */}
-        <div className="relative z-10 flex flex-col justify-between h-full text-center space-y-6 px-4 sm:px-12 py-3">
-          
-          {/* TOP SECTION */}
-          <div className="space-y-3 pt-2">
-            <p className="text-xs sm:text-sm font-bold uppercase tracking-[0.3em] text-[#444444]">
-              OFFICIAL CERTIFICATE OF COMPLETION
-            </p>
+          {/* Four Decorative Gold Corner Accents */}
+          <div className="absolute top-8 left-8 w-6 h-6 border-t-2 border-l-2 border-[#C9A227] pointer-events-none" />
+          <div className="absolute top-8 right-8 w-6 h-6 border-t-2 border-r-2 border-[#C9A227] pointer-events-none" />
+          <div className="absolute bottom-8 left-8 w-6 h-6 border-b-2 border-l-2 border-[#C9A227] pointer-events-none" />
+          <div className="absolute bottom-8 right-8 w-6 h-6 border-b-2 border-r-2 border-[#C9A227] pointer-events-none" />
 
-            {/* Thin Gold Accent Line */}
-            <div className="h-[1.5px] w-24 bg-[#C9A227] mx-auto" />
+          {/* MAIN CERTIFICATE CONTENT CONTAINER */}
+          <div className="relative z-10 flex flex-col justify-between h-full text-center px-6 py-4">
 
-            {/* Main Title (Larger Typography) */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-[#1B2A49] tracking-tight font-serif pt-1">
-              CERTIFICATE OF COMPLETION
-            </h1>
+            {/* TOP HEADER SECTION */}
+            <div className="space-y-4 pt-4">
+              {/* Corporate Logo Badge */}
+              <div className="inline-flex items-center justify-center p-3 bg-[#0F172A] text-white rounded-2xl shadow-md border border-[#C9A227]">
+                <ShieldCheck className="w-10 h-10 text-[#C9A227]" />
+              </div>
 
-            {/* Subtitle */}
-            <p className="text-sm sm:text-lg text-[#444444] italic font-serif pt-1">
-              This certificate is proudly presented to
-            </p>
-          </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.35em] text-[#C9A227]">
+                  CORPORATE INDUCTION & COMPLIANCE ACADEMY
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.25em] text-slate-400 font-semibold mt-0.5">
+                  Official Enterprise Onboarding Credential
+                </p>
+              </div>
 
-          {/* RECIPIENT SECTION */}
-          <div className="space-y-3 py-1">
-            {/* Large Recipient Name */}
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-[#1B2A49] tracking-wide font-serif">
-              {fullName}
-            </h2>
+              {/* Decorative Gold Divider */}
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <div className="h-[1px] w-20 bg-[#C9A227]" />
+                <span className="text-[#C9A227] text-xs">◆</span>
+                <div className="h-[1px] w-20 bg-[#C9A227]" />
+              </div>
 
-            {/* Employee Information */}
-            <p className="text-sm sm:text-base font-semibold text-[#444444] pt-1">
-              {certData.employee.department} <span className="text-[#C9A227] font-black mx-1.5">●</span> {certData.employee.designation} <span className="text-[#C9A227] font-black mx-1.5">●</span> ID: {certData.employee.employeeId}
-            </p>
+              {/* Title */}
+              <h1 className="text-4xl font-bold text-[#0F172A] tracking-tight font-serif pt-2">
+                CERTIFICATE OF COMPLETION
+              </h1>
 
-            {/* Thin Elegant Divider */}
-            <div className="h-[1.5px] w-56 sm:w-80 bg-[#C9A227] mx-auto mt-2" />
-          </div>
-
-          {/* BODY TEXT, COURSE TITLE & COMPLETION/ASSESSMENT METRICS */}
-          <div className="space-y-4 max-w-3xl mx-auto py-1">
-            <p className="text-sm sm:text-base text-[#444444] leading-relaxed font-normal">
-              This certifies that the above employee has successfully completed all mandatory induction and onboarding requirements and has demonstrated commitment to the organization&apos;s standards, values, and learning objectives.
-            </p>
-
-            {/* Course Title (Large) */}
-            <h3 className="text-xl sm:text-3xl font-bold text-[#1B2A49] font-serif pt-1">
-              {certData.course.title || 'Employee Induction & Onboarding Program 2026'}
-            </h3>
-
-            {/* Completion % and Assessment Passing % Metric Badge */}
-            <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-[#1B2A49] shadow-soft-xs mx-auto">
-              <span>Curriculum Completion: <strong className="text-emerald-700 font-bold">100%</strong></span>
-              <span className="text-[#C9A227] font-bold">●</span>
-              <span>Assessment Passing Score: <strong className="text-[#1B2A49] font-bold">{passingScore}%</strong></span>
-              <span className="text-[#C9A227] font-bold">●</span>
-              <span>Score Achieved: <strong className="text-blue-700 font-bold">{achievedScore}%</strong></span>
-            </div>
-          </div>
-
-          {/* BOTTOM SECTION (THREE COLUMNS WITH LARGER TEXT) */}
-          <div className="pt-8 border-t border-[#E8E8E8] grid grid-cols-3 gap-6 items-end text-center">
-            
-            {/* LEFT COLUMN: CERTIFICATE NUMBER */}
-            <div className="flex flex-col items-center sm:items-start text-left space-y-1">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#444444]">
-                CERTIFICATE NUMBER
-              </p>
-              <p className="text-sm sm:text-base font-mono font-bold text-[#1B2A49]">
-                {certData.certificateNumber}
+              <p className="text-sm text-slate-600 italic font-serif">
+                This official credential is proudly awarded to
               </p>
             </div>
 
-            {/* CENTER COLUMN: AUTHORIZED SIGNATORY */}
-            <div className="flex flex-col items-center justify-center space-y-1">
-              <div className="w-40 border-b-2 border-[#1B2A49] mb-1.5" />
-              <p className="text-sm sm:text-base font-bold text-[#1B2A49]">
-                Authorized Signatory
-              </p>
-              <p className="text-xs sm:text-sm text-[#444444] font-medium">
-                HR Operations Lead
-              </p>
+            {/* RECIPIENT NAME & EMPLOYEE METRICS */}
+            <div className="space-y-4 py-2">
+              <h2 className="text-4xl font-extrabold text-[#0F172A] tracking-wide font-serif border-b-2 border-[#C9A227]/40 pb-3 max-w-xl mx-auto">
+                {fullName}
+              </h2>
+
+              <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-700">
+                <span className="bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                  Department: <strong className="text-[#0F172A]">{certData.employee.department}</strong>
+                </span>
+                <span className="text-[#C9A227]">●</span>
+                <span className="bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                  Role: <strong className="text-[#0F172A]">{certData.employee.designation}</strong>
+                </span>
+                <span className="text-[#C9A227]">●</span>
+                <span className="bg-slate-100 px-3 py-1 rounded-full border border-slate-200 font-mono">
+                  ID: {certData.employee.employeeId}
+                </span>
+              </div>
             </div>
 
-            {/* RIGHT COLUMN: COMPLETION DATE */}
-            <div className="flex flex-col items-center sm:items-end text-right space-y-1">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#444444]">
-                COMPLETION DATE
+            {/* BODY TEXT & COURSE COMPLETED */}
+            <div className="space-y-4 max-w-2xl mx-auto py-2">
+              <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                For successfully fulfilling all mandatory requirements, adhering to organizational standards, and demonstrating proficiency in the corporate induction curriculum for:
               </p>
-              <p className="text-sm sm:text-base font-semibold text-[#1B2A49]">
-                {issueDateFormatted}
-              </p>
+
+              <h3 className="text-2xl font-bold text-[#0F172A] font-serif bg-slate-50 p-3 rounded-2xl border border-slate-200 shadow-soft-xs">
+                {certData.course.title || 'Employee Induction & Onboarding Program 2026'}
+              </h3>
+
+              {/* Achievement Badge */}
+              <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-slate-800 shadow-soft-xs">
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  Curriculum: <strong className="text-emerald-700 font-bold">100% Completed</strong>
+                </span>
+                <span className="text-[#C9A227]">●</span>
+                <span>
+                  Passing Required: <strong>{passingScore}%</strong>
+                </span>
+                <span className="text-[#C9A227]">●</span>
+                <span>
+                  Score Achieved: <strong className="text-blue-700 font-bold">{achievedScore}%</strong>
+                </span>
+              </div>
             </div>
 
+            {/* FOOTER SIGNATURE, SEAL & QR VERIFICATION */}
+            <div className="pt-6 border-t-2 border-slate-100 grid grid-cols-3 gap-4 items-end text-center">
+
+              {/* LEFT COLUMN: CERTIFICATE CREDENTIALS */}
+              <div className="text-left space-y-1.5 pl-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C9A227]">
+                  CREDENTIAL IDENTIFIER
+                </p>
+                <p className="text-xs font-mono font-bold text-[#0F172A]">
+                  {certData.certificateNumber}
+                </p>
+
+                <div className="pt-2 space-y-0.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                    ISSUE DATE
+                  </p>
+                  <p className="text-xs font-semibold text-slate-700">
+                    {issueDateFormatted}
+                  </p>
+                </div>
+              </div>
+
+              {/* CENTER COLUMN: EMBOSSED GOLD CORPORATE SEAL & SIGNATURE */}
+              <div className="flex flex-col items-center justify-center space-y-3">
+                {/* Official Gold Seal Badge */}
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#B38728] via-[#FBF5B7] to-[#AA771C] p-1 shadow-lg flex items-center justify-center">
+                  <div className="w-full h-full rounded-full border-2 border-dashed border-[#593E00] bg-[#0F172A] flex flex-col items-center justify-center text-center p-1">
+                    <Sparkles className="w-4 h-4 text-[#FBF5B7]" />
+                    <span className="text-[7px] font-extrabold text-[#FBF5B7] uppercase tracking-tighter leading-tight mt-0.5">
+                      OFFICIAL SEAL
+                    </span>
+                    <span className="text-[6px] text-emerald-300 font-bold">VERIFIED</span>
+                  </div>
+                </div>
+
+                {/* Signature Line */}
+                <div className="space-y-0.5 text-center pt-1">
+                  <div className="w-36 border-b border-slate-900 mx-auto" />
+                  <p className="text-xs font-bold text-[#0F172A] font-serif pt-0.5">
+                    Executive HR Operations
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Corporate Onboarding Committee
+                  </p>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: SCANNABLE QR CODE & VERIFICATION LINK */}
+              <div className="flex flex-col items-end text-right pr-2 space-y-1">
+                {certData.qrDataUrl && (
+                  <div className="p-1 bg-white border border-slate-300 rounded-lg shadow-soft-xs">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={certData.qrDataUrl}
+                      alt="Certificate Verification QR Code"
+                      className="w-20 h-20 object-contain"
+                    />
+                  </div>
+                )}
+                <p className="text-[9px] font-bold text-slate-500 tracking-tight">
+                  Scan to Verify Authentic Credential
+                </p>
+                <p className="text-[8px] font-mono text-slate-400">
+                  /verify?cert={certData.certificateNumber}
+                </p>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>

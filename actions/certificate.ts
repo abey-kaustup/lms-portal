@@ -74,15 +74,15 @@ export async function getEmployeeCertificate() {
     return null;
   }
 
-  // Generate Data URL for QR Code (High-resolution, high-contrast for instant camera scanning)
+  // Generate Data URL for QR Code linking to verification route
   const qrDataUrl = await QRCode.toDataURL(
-    `https://corporate-lms.internal/verify?cert=${certificate.certificateNumber}`,
+    `/verify?cert=${certificate.certificateNumber}`,
     {
       errorCorrectionLevel: 'H',
       margin: 1,
       width: 300,
       color: {
-        dark: '#0A192F',
+        dark: '#0F172A',
         light: '#FFFFFF',
       },
     }
@@ -111,12 +111,27 @@ export async function getCertificateByNumber(certificateNumber: string) {
 
   if (!certificate) return null;
 
+  const passedAttempt = await prisma.assessmentAttempt.findFirst({
+    where: { employeeId: certificate.employeeId, passed: true },
+    orderBy: { score: 'desc' },
+  });
+
   const qrDataUrl = await QRCode.toDataURL(
-    `https://lms.corporate.internal/verify?cert=${certificate.certificateNumber}&code=${certificate.qrVerificationCode}`
+    `/verify?cert=${certificate.certificateNumber}`,
+    {
+      errorCorrectionLevel: 'H',
+      margin: 1,
+      width: 300,
+      color: {
+        dark: '#0F172A',
+        light: '#FFFFFF',
+      },
+    }
   );
 
   return {
     ...certificate,
+    passedAttempt,
     qrDataUrl,
   };
 }
