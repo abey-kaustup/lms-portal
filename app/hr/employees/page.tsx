@@ -475,11 +475,12 @@ export default function HREmployeesPage() {
               <label className="text-xs font-bold text-slate-700">Middle Name (Optional)</label>
               <input
                 type="text"
-                placeholder="M."
+                placeholder="e.g. Ramesh or A."
                 value={formData.middleName}
                 onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
-                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
+              <p className="text-[10px] text-slate-400 font-medium">Must contain at least one letter (cannot be only dots or special characters)</p>
             </div>
 
             <div className="space-y-1">

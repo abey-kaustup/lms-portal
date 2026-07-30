@@ -38,10 +38,20 @@ const COMMAND_ITEMS: CommandItem[] = [
   { id: 'emp-cert', title: 'View & Download Certificate', category: 'Navigation', href: '/employee/certificate', icon: Award },
 ];
 
-export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function CommandPalette({
+  isOpen,
+  onClose,
+  userRole = 'EMPLOYEE',
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  userRole?: string;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const isHR = userRole === 'HR_ADMIN';
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -50,7 +60,6 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
         if (isOpen) onClose();
         else {
           setQuery('');
-          // open signal
         }
       }
       if (e.key === 'Escape' && isOpen) {
@@ -63,9 +72,19 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
 
   if (!isOpen) return null;
 
-  const filteredItems = COMMAND_ITEMS.filter((item) =>
-    item.title.toLowerCase().includes(query.toLowerCase()) ||
-    item.category.toLowerCase().includes(query.toLowerCase())
+  // Strict role-based command filtering
+  // Non-HR users MUST NOT see administrative commands, employee directories, or HR reports
+  const rolePermittedItems = COMMAND_ITEMS.filter((item) => {
+    if (!isHR && item.href.startsWith('/hr')) {
+      return false;
+    }
+    return true;
+  });
+
+  const filteredItems = rolePermittedItems.filter(
+    (item) =>
+      item.title.toLowerCase().includes(query.toLowerCase()) ||
+      item.category.toLowerCase().includes(query.toLowerCase())
   );
 
   const handleSelect = (href: string) => {
@@ -85,7 +104,11 @@ export function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: 
           <input
             type="text"
             autoFocus
-            placeholder="Type a command or search page (e.g. Course, Employees, Reports)..."
+            placeholder={
+              isHR
+                ? 'Type a command or search page (e.g. Course, Employees, Reports)...'
+                : 'Search learning center (e.g. Lessons, Assessment, Certificate)...'
+            }
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);

@@ -131,6 +131,46 @@ export function validateDateNotFuture(
 }
 
 /**
+ * Validates Middle Name specifically:
+ * - If provided, must contain at least one alphabetic character [A-Za-z]
+ * - Rejects inputs that consist ONLY of dots ('.', '..', '...'), numbers, spaces, or special characters
+ * - Allows valid names (Rahul, Shrikant, Amit, Suresh, Ramesh Kumar, A. Kumar)
+ */
+export function validateMiddleName(
+  middleName: string | null | undefined
+): ValidationResult {
+  const trimmed = (middleName || '').trim();
+
+  // Empty or omitted middle name is allowed
+  if (!trimmed) {
+    return { isValid: true };
+  }
+
+  if (trimmed.length > 50) {
+    return { isValid: false, error: 'Middle Name must not exceed 50 characters.' };
+  }
+
+  // Must contain at least one alphabetic letter
+  if (!/[A-Za-z]/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: 'Middle Name must contain at least one alphabetic letter (cannot be only dots, numbers, or special characters).',
+    };
+  }
+
+  // Allowed character set: letters, spaces, hyphens, apostrophes, and periods
+  const middleNameRegex = /^[A-Za-z\s'\-.]+$/;
+  if (!middleNameRegex.test(trimmed)) {
+    return {
+      isValid: false,
+      error: 'Middle Name contains invalid characters. Only letters, spaces, hyphens, apostrophes, and periods are allowed.',
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
  * Comprehensive Employee Form Validation
  */
 export function validateEmployeeData(data: {
@@ -145,11 +185,9 @@ export function validateEmployeeData(data: {
   const fnRes = validateName(data.firstName, 'First Name', true);
   if (!fnRes.isValid) return fnRes;
 
-  // 2. Validate Middle Name (optional)
-  if (data.middleName && data.middleName.trim()) {
-    const mnRes = validateName(data.middleName, 'Middle Name', false);
-    if (!mnRes.isValid) return mnRes;
-  }
+  // 2. Validate Middle Name (optional, but strictly validated if entered)
+  const mnRes = validateMiddleName(data.middleName);
+  if (!mnRes.isValid) return mnRes;
 
   // 3. Validate Last Name
   const lnRes = validateName(data.lastName, 'Last Name', true);

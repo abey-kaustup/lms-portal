@@ -34,6 +34,7 @@ export function EmployeeLayoutClient({
           <HRHeader
             userName={userName}
             userEmail={userEmail}
+            userRole="EMPLOYEE"
             userSubtitle={userSubtitle}
             userInitials={userInitials}
             onToggleMobileSidebar={() => setMobileOpen(!mobileOpen)}
