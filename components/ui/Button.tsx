@@ -22,7 +22,8 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none text-sm';
+  const alignStyle = className.includes('justify-') ? '' : 'justify-center';
+  const baseStyles = `inline-flex items-center ${alignStyle} font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none text-sm`;
 
   const sizeStyles = {
     sm: 'px-3 py-1.5 rounded-xl gap-1.5 h-8 text-[13px]',
