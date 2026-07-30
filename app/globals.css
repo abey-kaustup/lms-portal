@@ -1,33 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 221.2 83.2% 53.3%;
-    --secondary-foreground: 210 40% 98%;
-    --success: 160 84% 39%;
-    --warning: 38 92% 50%;
-    --danger: 0 84% 60%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --border: 214.3 31.8% 91.4%;
-    --radius: 0.75rem;
+    --font-primary: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, Helvetica, sans-serif;
+    --font-mono: 'Roboto Mono', 'Geist Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --background: #F8FAFC;
+    --foreground: #0F172A;
+    --primary: #2563EB;
+    --primary-hover: #1D4ED8;
+    --secondary: #0F172A;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --card: #FFFFFF;
+    --border: #E2E8F0;
+    --radius-lg: 0.75rem; /* 12px */
+    --radius-xl: 1rem;    /* 16px */
+    --radius-2xl: 1.25rem;/* 20px */
   }
 }
 
 body {
-  background-color: #F8FAFC;
-  color: #0F172A;
-  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-primary);
+  font-size: 15px;
+  font-weight: 400;
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom Scrollbars */
+code, kbd, samp, pre, .font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* Typography Hierarchy Utilities */
+.font-display {
+  font-family: var(--font-primary);
+  font-weight: 700;
+}
+
+h1, .text-h1 {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+}
+
+h2, .text-h2 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+h3, .text-h3 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.text-subheading {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 500;
+}
+
+.text-body {
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+.text-secondary-text {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.text-caption {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+.btn-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.table-header {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.table-body {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.sidebar-menu {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Custom Enterprise Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -41,4 +119,21 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+/* Custom Soft Elevation Shadows */
+.shadow-soft-xs {
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+}
+.shadow-soft-sm {
+  box-shadow: 0 2px 4px 0 rgba(15, 23, 42, 0.04), 0 1px 2px 0 rgba(15, 23, 42, 0.02);
+}
+.shadow-soft-md {
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+}
+.shadow-soft-lg {
+  box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+}
+.shadow-soft-xl {
+  box-shadow: 0 20px 32px -6px rgba(15, 23, 42, 0.12), 0 8px 16px -4px rgba(15, 23, 42, 0.06);
 }

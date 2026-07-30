@@ -41,7 +41,10 @@ export async function getEmployees({
   }
 
   if (department && department !== 'ALL') {
-    where.department = department;
+    where.OR = [
+      { departmentId: department },
+      { department: department },
+    ];
   }
 
   if (status && status !== 'ALL') {
@@ -55,6 +58,7 @@ export async function getEmployees({
     skip: (page - 1) * pageSize,
     take: pageSize,
     include: {
+      departmentRel: true,
       lessonProgresses: {
         where: { isCompleted: true },
       },
@@ -66,20 +70,18 @@ export async function getEmployees({
     },
   });
 
-  const deptRecords = await prisma.employee.findMany({
+  const activeDepartments = await prisma.department.findMany({
     where: { isDeleted: false },
-    select: { department: true },
-    distinct: ['department'],
-    orderBy: { department: 'asc' },
+    orderBy: { name: 'asc' },
   });
-  const departments = deptRecords.map((d) => d.department).filter(Boolean);
 
   return {
     employees,
     total,
     totalPages: Math.ceil(total / pageSize),
     page,
-    departments,
+    departments: activeDepartments.map((d) => d.name),
+    departmentItems: activeDepartments,
   };
 }
 
@@ -92,6 +94,7 @@ export async function getEmployeeById(id: string) {
   const employee = await prisma.employee.findUnique({
     where: { id },
     include: {
+      departmentRel: true,
       lessonProgresses: {
         include: { lesson: true },
       },
@@ -117,6 +120,7 @@ export async function saveEmployee(data: {
   lastName: string;
   email: string;
   department: string;
+  departmentId?: string | null;
   designation: string;
   office: string;
   joiningDate: string;
@@ -144,6 +148,26 @@ export async function saveEmployee(data: {
     const joiningDate = new Date(data.joiningDate);
     const cleanEmpId = data.employeeId.trim().toUpperCase();
 
+    // Resolve departmentId
+    let targetDeptId = data.departmentId || null;
+    let targetDeptName = data.department.trim();
+
+    if (targetDeptId) {
+      const deptObj = await prisma.department.findUnique({ where: { id: targetDeptId } });
+      if (deptObj) targetDeptName = deptObj.name;
+    } else if (targetDeptName) {
+      const deptObj = await prisma.department.findFirst({
+        where: {
+          isDeleted: false,
+          OR: [{ name: targetDeptName }, { code: targetDeptName.toUpperCase() }],
+        },
+      });
+      if (deptObj) {
+        targetDeptId = deptObj.id;
+        targetDeptName = deptObj.name;
+      }
+    }
+
     if (data.id) {
       // Update
       const existing = await prisma.employee.findFirst({
@@ -165,7 +189,8 @@ export async function saveEmployee(data: {
           middleName: data.middleName?.trim() || null,
           lastName: data.lastName.trim(),
           email: data.email.trim(),
-          department: data.department.trim(),
+          department: targetDeptName,
+          departmentId: targetDeptId,
           designation: data.designation.trim(),
           office: data.office.trim(),
           joiningDate,
@@ -191,7 +216,8 @@ export async function saveEmployee(data: {
           middleName: data.middleName?.trim() || null,
           lastName: data.lastName.trim(),
           email: data.email.trim(),
-          department: data.department.trim(),
+          department: targetDeptName,
+          departmentId: targetDeptId,
           designation: data.designation.trim(),
           office: data.office.trim(),
           joiningDate,

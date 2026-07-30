@@ -17,7 +17,7 @@ export async function getHRDashboardStats() {
     allPassedAttempts,
     recentActivityLogs,
     totalLessonsCount,
-    employees,
+    departments,
   ] = await Promise.all([
     prisma.employee.count({ where: { isDeleted: false } }),
     prisma.employee.count({ where: { isDeleted: false, status: 'ACTIVE' } }),
@@ -34,11 +34,15 @@ export async function getHRDashboardStats() {
       },
     }),
     prisma.lesson.count({ where: { isDeleted: false } }),
-    prisma.employee.findMany({
+    prisma.department.findMany({
       where: { isDeleted: false },
       include: {
-        certificates: true,
-        lessonProgresses: { where: { isCompleted: true } },
+        _count: {
+          select: {
+            employees: { where: { isDeleted: false } },
+            modules: { where: { isDeleted: false } },
+          },
+        },
       },
     }),
   ]);
@@ -63,19 +67,29 @@ export async function getHRDashboardStats() {
     avgAssessmentScore,
     recentActivityLogs,
     totalLessonsCount,
+    departments,
   };
 }
 
-export async function getHRDetailedReport() {
+export async function getHRDetailedReport(departmentFilter?: string) {
   const session = await getSession();
   if (!session || session.role !== 'HR_ADMIN') {
     throw new Error('Unauthorized');
   }
 
+  const where: any = { isDeleted: false };
+  if (departmentFilter && departmentFilter !== 'ALL') {
+    where.OR = [
+      { departmentId: departmentFilter },
+      { department: departmentFilter },
+    ];
+  }
+
   const employees = await prisma.employee.findMany({
-    where: { isDeleted: false },
+    where,
     orderBy: { employeeId: 'asc' },
     include: {
+      departmentRel: true,
       lessonProgresses: {
         where: { isCompleted: true },
       },
@@ -86,11 +100,35 @@ export async function getHRDetailedReport() {
     },
   });
 
-  const totalLessons = await prisma.lesson.count({ where: { isDeleted: false } });
+  // Fetch all active modules to calculate expected lessons per department
+  const allModules = await prisma.module.findMany({
+    where: { isDeleted: false },
+    include: {
+      lessons: { where: { isDeleted: false } },
+    },
+  });
 
   const reportRows = employees.map((emp) => {
+    // Calculate employee-specific assigned lessons count (Common + Dept modules)
+    const assignedModules = allModules.filter((m) => {
+      if (m.moduleType === 'COMMON') return true;
+      if (m.moduleType === 'DEPARTMENT') {
+        if (emp.departmentId && m.departmentId === emp.departmentId) return true;
+        if (emp.department && m.departmentId) return true;
+      }
+      return false;
+    });
+
+    let assignedLessonsTotal = 0;
+    assignedModules.forEach((m) => {
+      assignedLessonsTotal += m.lessons.length;
+    });
+
     const completedLessonsCount = emp.lessonProgresses.length;
-    const progressPercent = totalLessons > 0 ? Math.round((completedLessonsCount / totalLessons) * 100) : 0;
+    const progressPercent = assignedLessonsTotal > 0
+      ? Math.min(100, Math.round((completedLessonsCount / assignedLessonsTotal) * 100))
+      : 0;
+
     const isCompleted = emp.certificates.length > 0;
     const attemptsCount = emp.assessmentAttempts.length;
     const bestAttempt = emp.assessmentAttempts.reduce(
@@ -103,12 +141,12 @@ export async function getHRDetailedReport() {
       id: emp.id,
       employeeId: emp.employeeId,
       name: `${emp.firstName} ${emp.lastName}`,
-      department: emp.department,
+      department: emp.departmentRel?.name || emp.department,
       designation: emp.designation,
       office: emp.office,
       progressPercent,
       completedLessonsCount,
-      totalLessons,
+      totalLessons: assignedLessonsTotal,
       isCompleted,
       attemptsCount,
       bestScore: attemptsCount > 0 ? `${bestAttempt}%` : 'N/A',
@@ -120,13 +158,13 @@ export async function getHRDetailedReport() {
   return reportRows;
 }
 
-export async function exportReportToExcel() {
+export async function exportReportToExcel(departmentFilter?: string) {
   const session = await getSession();
   if (!session || session.role !== 'HR_ADMIN') {
     throw new Error('Unauthorized');
   }
 
-  const reportRows = await getHRDetailedReport();
+  const reportRows = await getHRDetailedReport(departmentFilter);
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Induction Progress Report');

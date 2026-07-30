@@ -5,7 +5,7 @@ import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
 export async function getCourseWithStructure() {
-  // Currently Induction Course code: IND-2026-01
+  // Single Induction Course code: IND-2026-01
   const course = await prisma.course.findFirst({
     where: { isDeleted: false },
     include: {
@@ -13,6 +13,7 @@ export async function getCourseWithStructure() {
         where: { isDeleted: false },
         orderBy: { sortOrder: 'asc' },
         include: {
+          department: true,
           lessons: {
             where: { isDeleted: false },
             orderBy: { sortOrder: 'asc' },
@@ -22,6 +23,11 @@ export async function getCourseWithStructure() {
       assessmentQuestions: {
         where: { isDeleted: false },
         orderBy: { sortOrder: 'asc' },
+        include: {
+          module: {
+            include: { department: true },
+          },
+        },
       },
     },
   });
@@ -33,6 +39,8 @@ export async function createModule(data: {
   courseId: string;
   title: string;
   description?: string;
+  moduleType?: 'COMMON' | 'DEPARTMENT';
+  departmentId?: string | null;
   sortOrder?: number;
 }) {
   const session = await getSession();
@@ -42,18 +50,27 @@ export async function createModule(data: {
 
   try {
     const count = await prisma.module.count({ where: { courseId: data.courseId } });
+    const moduleType = data.moduleType || 'COMMON';
+    const departmentId = moduleType === 'DEPARTMENT' ? data.departmentId || null : null;
+
+    if (moduleType === 'DEPARTMENT' && !departmentId) {
+      return { success: false, error: 'Department selection is required for Department modules.' };
+    }
 
     await prisma.module.create({
       data: {
         courseId: data.courseId,
         title: data.title.trim(),
         description: data.description?.trim() || null,
+        moduleType,
+        departmentId,
         sortOrder: data.sortOrder ?? count + 1,
       },
     });
 
     revalidatePath('/hr/course');
     revalidatePath('/employee/learn');
+    revalidatePath('/employee/dashboard');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to create module.' };
@@ -64,6 +81,8 @@ export async function updateModule(data: {
   id: string;
   title: string;
   description?: string;
+  moduleType?: 'COMMON' | 'DEPARTMENT';
+  departmentId?: string | null;
   sortOrder?: number;
 }) {
   const session = await getSession();
@@ -72,17 +91,27 @@ export async function updateModule(data: {
   }
 
   try {
+    const moduleType = data.moduleType || 'COMMON';
+    const departmentId = moduleType === 'DEPARTMENT' ? data.departmentId || null : null;
+
+    if (moduleType === 'DEPARTMENT' && !departmentId) {
+      return { success: false, error: 'Department selection is required for Department modules.' };
+    }
+
     await prisma.module.update({
       where: { id: data.id },
       data: {
         title: data.title.trim(),
         description: data.description?.trim() || null,
+        moduleType,
+        departmentId,
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
       },
     });
 
     revalidatePath('/hr/course');
     revalidatePath('/employee/learn');
+    revalidatePath('/employee/dashboard');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to update module.' };
@@ -103,6 +132,7 @@ export async function deleteModule(id: string) {
 
     revalidatePath('/hr/course');
     revalidatePath('/employee/learn');
+    revalidatePath('/employee/dashboard');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: 'Failed to delete module.' };

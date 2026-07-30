@@ -9,6 +9,8 @@ import { useAntiCheat } from '@/hooks/useAntiCheat';
 import { useToast } from '@/components/ui/Toast';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 import {
   FileCheck2,
   Clock,
@@ -17,7 +19,6 @@ import {
   RotateCcw,
   Award,
   BookOpen,
-  ArrowRight,
   ShieldCheck,
   AlertTriangle,
 } from 'lucide-react';
@@ -59,7 +60,6 @@ export default function EmployeeAssessmentPage() {
     setStartTime(Date.now());
   }, []);
 
-  // Timer counter
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
@@ -125,162 +125,151 @@ export default function EmployeeAssessmentPage() {
 
   if (!learningState?.isAssessmentUnlocked && !learningState?.isCourseFullyCompleted) {
     return (
-      <div className="p-8 bg-white rounded-3xl text-center border border-slate-200 shadow-xs max-w-xl mx-auto space-y-4">
+      <div className="p-8 bg-white rounded-3xl text-center border border-slate-200 shadow-soft-xs max-w-xl mx-auto space-y-4">
         <div className="p-4 bg-amber-50 text-amber-600 rounded-full w-16 h-16 mx-auto flex items-center justify-center">
           <AlertTriangle className="w-8 h-8" />
         </div>
         <h3 className="text-lg font-bold text-slate-900">Assessment Currently Locked</h3>
-        <p className="text-xs text-slate-500">
-          You must complete all lessons in the Induction course before attempting the final assessment.
+        <p className="text-xs text-slate-500 font-medium">
+          You must complete all Common Modules and your assigned Department Modules before attempting the final assessment.
         </p>
-        <Link
-          href="/employee/learn"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
-        >
-          <BookOpen className="w-4 h-4" />
-          <span>Return to Learning Workspace</span>
+        <Link href="/employee/learn">
+          <Button variant="primary" icon={BookOpen}>
+            Return to Learning Workspace
+          </Button>
         </Link>
       </div>
     );
   }
 
+  const empDeptName = learningState?.employee?.departmentRel?.name || learningState?.employee?.department || 'Department';
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header bar */}
-      <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Proctored Header Card */}
+      <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-soft-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
             <ShieldCheck className="w-4 h-4" />
-            <span>Proctored Corporate Assessment</span>
+            <span>Proctored Corporate Assessment ({empDeptName})</span>
           </div>
-          <h2 className="text-2xl font-black tracking-tight mt-1">Final Induction Assessment</h2>
-          <p className="text-xs text-slate-400">
-            Passing Threshold: <strong>{learningState.course?.passingScore}%</strong> | Unlimited Retakes
+          <h1 className="text-2xl font-black tracking-tight mt-1">Final Induction Assessment</h1>
+          <p className="text-xs text-slate-400 font-medium">
+            Passing Score: <strong>{learningState.course?.passingScore}%</strong> | Common + {empDeptName} Questions
           </p>
         </div>
 
-        <div className="flex items-center gap-4 bg-slate-800/90 px-4 py-2.5 rounded-2xl border border-slate-700">
+        <div className="flex items-center gap-4 bg-slate-800 px-4 py-2.5 rounded-2xl border border-slate-700">
           <Clock className="w-5 h-5 text-amber-400" />
           <div>
-            <p className="text-[10px] text-slate-400 uppercase font-semibold">Time Elapsed</p>
+            <p className="text-[10px] text-slate-400 uppercase font-bold">Time Elapsed</p>
             <p className="text-sm font-mono font-bold text-white">{formatTimer(elapsedSeconds)}</p>
           </div>
         </div>
       </div>
 
-      {/* Previous attempts summary if available */}
+      {/* Previous Passed Attempt Banner */}
       {learningState.passedAttempt && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between">
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between shadow-soft-xs">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
             <div>
               <p className="text-xs font-bold text-emerald-900">
-                You have already passed this assessment with a score of {learningState.passedAttempt.score}%!
+                You passed this assessment with a score of {learningState.passedAttempt.score}%!
               </p>
-              <p className="text-[11px] text-emerald-700">
-                Your verified certificate is ready. You may retake the test at any time to improve your score.
+              <p className="text-[11px] text-emerald-700 font-medium">
+                Your verified corporate certificate is available for download.
               </p>
             </div>
           </div>
-          <Link
-            href="/employee/certificate"
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
-          >
-            <Award className="w-4 h-4" />
-            <span>View Certificate</span>
+          <Link href="/employee/certificate">
+            <Button variant="success" size="sm" icon={Award}>
+              View Certificate
+            </Button>
           </Link>
         </div>
       )}
 
-      {/* Questions Form */}
+      {/* Questions Card Stack */}
       <div className="space-y-6">
         {questions.map((q, idx) => {
           const isAnswered = selectedAnswers[q.id] !== undefined;
 
           return (
-            <div
-              key={q.id}
-              className={`p-6 bg-white rounded-3xl border transition-all ${
-                isAnswered ? 'border-blue-200 shadow-xs' : 'border-slate-200'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">
-                  Question 0{idx + 1}
-                </span>
+            <Card key={q.id} className={isAnswered ? 'border-blue-200 shadow-soft-xs' : ''}>
+              <CardHeader className="flex-row items-start justify-between gap-3 border-b-0 pb-2">
+                <Badge variant="info">Question 0{idx + 1}</Badge>
                 <span className="text-xs font-semibold text-slate-400">{q.points} Point(s)</span>
-              </div>
+              </CardHeader>
 
-              <h3 className="text-base font-bold text-slate-900 mb-4">{q.questionText}</h3>
+              <CardContent className="space-y-4">
+                <h3 className="text-base font-bold text-slate-900">{q.questionText}</h3>
 
-              <div className="space-y-2.5">
-                {q.options.map((opt: string, optIdx: number) => {
-                  const isSelected = selectedAnswers[q.id] === optIdx;
+                <div className="space-y-2.5">
+                  {q.options.map((opt: string, optIdx: number) => {
+                    const isSelected = selectedAnswers[q.id] === optIdx;
 
-                  return (
-                    <button
-                      key={optIdx}
-                      type="button"
-                      onClick={() => handleOptionSelect(q.id, optIdx)}
-                      className={`w-full text-left p-4 rounded-2xl border text-xs font-semibold transition-all flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-blue-50 border-blue-600 text-blue-900 ring-2 ring-blue-500/20'
-                          : 'bg-slate-50/60 hover:bg-slate-100 border-slate-200 text-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold ${
-                            isSelected
-                              ? 'border-blue-600 bg-blue-600 text-white'
-                              : 'border-slate-300 text-slate-500'
-                          }`}
-                        >
-                          {String.fromCharCode(65 + optIdx)}
+                    return (
+                      <button
+                        key={optIdx}
+                        type="button"
+                        onClick={() => handleOptionSelect(q.id, optIdx)}
+                        className={`w-full text-left p-4 rounded-2xl border text-xs font-semibold transition-all flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 ring-2 ring-blue-500/20'
+                            : 'bg-slate-50/60 hover:bg-slate-100 border-slate-200 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold ${
+                              isSelected
+                                ? 'border-blue-600 bg-blue-600 text-white'
+                                : 'border-slate-300 text-slate-500'
+                            }`}
+                          >
+                            {String.fromCharCode(65 + optIdx)}
+                          </div>
+                          <span>{opt}</span>
                         </div>
-                        <span>{opt}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      {/* Action Footer */}
-      <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="text-xs text-slate-500">
-          Answered <strong>{Object.keys(selectedAnswers).length}</strong> of <strong>{questions.length}</strong> questions
-        </div>
+      {/* Action Footer Card */}
+      <Card>
+        <CardFooter className="mt-0 pt-0 border-t-0 flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs text-slate-500 font-medium">
+            Answered <strong className="text-slate-900 font-bold">{Object.keys(selectedAnswers).length}</strong> of <strong className="text-slate-900 font-bold">{questions.length}</strong> questions
+          </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Link
-            href="/employee/learn"
-            className="flex-1 sm:flex-initial px-5 py-3 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl text-center transition-colors"
-          >
-            Revisit Lessons
-          </Link>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Link href="/employee/learn">
+              <Button variant="outline" size="md">
+                Revisit Lessons
+              </Button>
+            </Link>
 
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="flex-1 sm:flex-initial px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {submitting ? (
-              <span>Evaluating Answers...</span>
-            ) : (
-              <>
-                <FileCheck2 className="w-4 h-4" />
-                <span>Submit Final Assessment</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+            <Button
+              variant="primary"
+              size="md"
+              icon={FileCheck2}
+              loading={submitting}
+              onClick={handleSubmit}
+            >
+              Submit Final Assessment
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
 
-      {/* Assessment Result Modal */}
+      {/* Result Modal */}
       <Modal
         isOpen={resultModalOpen}
         onClose={() => setResultModalOpen(false)}
@@ -290,37 +279,28 @@ export default function EmployeeAssessmentPage() {
         {resultData && (
           <div className="text-center space-y-6 py-2">
             <div
-              className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center shadow-lg ${
+              className={`w-20 h-20 rounded-full mx-auto flex items-center justify-center shadow-soft-lg ${
                 resultData.passed ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
               }`}
             >
-              {resultData.passed ? (
-                <CheckCircle2 className="w-10 h-10" />
-              ) : (
-                <XCircle className="w-10 h-10" />
-              )}
+              {resultData.passed ? <CheckCircle2 className="w-10 h-10" /> : <XCircle className="w-10 h-10" />}
             </div>
 
             <div>
               <h3 className="text-2xl font-black text-slate-900">
                 {resultData.passed ? 'Assessment Passed!' : 'Assessment Failed'}
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 font-medium mt-1">
                 {resultData.passed
-                  ? 'Congratulations! You have successfully passed the induction assessment.'
+                  ? 'Congratulations! You have successfully completed the induction assessment.'
                   : `Passing requirement is ${resultData.passingScore}%. You can retake the test immediately.`}
               </p>
             </div>
 
-            {/* Score Box */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-2 gap-4">
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Your Score</p>
-                <p
-                  className={`text-2xl font-black ${
-                    resultData.passed ? 'text-emerald-600' : 'text-red-600'
-                  }`}
-                >
+                <p className={`text-2xl font-black ${resultData.passed ? 'text-emerald-600' : 'text-red-600'}`}>
                   {resultData.scorePercentage}%
                 </p>
               </div>
@@ -332,36 +312,33 @@ export default function EmployeeAssessmentPage() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex flex-col gap-2 pt-2">
               {resultData.passed ? (
-                <Link
-                  href="/employee/certificate"
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md text-center transition-colors flex items-center justify-center gap-2"
-                >
-                  <Award className="w-4 h-4" />
-                  <span>Claim & Download Certificate</span>
+                <Link href="/employee/certificate">
+                  <Button variant="success" fullWidth size="lg" icon={Award}>
+                    Claim & Download Certificate
+                  </Button>
                 </Link>
               ) : (
                 <div className="flex gap-2">
-                  <Link
-                    href="/employee/learn"
-                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl text-center transition-colors"
-                  >
-                    Revisit Lessons
+                  <Link href="/employee/learn" className="flex-1">
+                    <Button variant="outline" fullWidth size="md">
+                      Revisit Lessons
+                    </Button>
                   </Link>
-
-                  <button
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    size="md"
+                    icon={RotateCcw}
                     onClick={() => {
                       setResultModalOpen(false);
                       setSelectedAnswers({});
                       setStartTime(Date.now());
                     }}
-                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl text-center transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Retake Test Now</span>
-                  </button>
+                    Retake Test
+                  </Button>
                 </div>
               )}
             </div>

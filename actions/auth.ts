@@ -78,7 +78,9 @@ export async function loginEmployee(prevState: any, formData: FormData) {
     email: employee.email,
     role: 'EMPLOYEE',
     department: employee.department,
+    departmentId: employee.departmentId,
     designation: employee.designation,
+    isMasterTester: employee.isMasterTester,
   });
 
   // Log activity

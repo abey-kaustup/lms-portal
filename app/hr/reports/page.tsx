@@ -2,9 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { getHRDetailedReport, exportReportToExcel } from '@/actions/reports';
+import { getDepartments } from '@/actions/department';
 import { useToast } from '@/components/ui/Toast';
-import { Badge } from '@/components/ui/Badge';
-import { ProgressBar } from '@/components/ui/Badge';
+import { Badge, ProgressBar } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { DataTable, Column } from '@/components/ui/DataTable';
 import {
   BarChart3,
   Download,
@@ -13,6 +16,8 @@ import {
   Clock,
   Award,
   FileSpreadsheet,
+  Building2,
+  Filter,
 } from 'lucide-react';
 
 export default function HRReportsPage() {
@@ -20,14 +25,21 @@ export default function HRReportsPage() {
 
   const [loading, setLoading] = useState(true);
   const [reportRows, setReportRows] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
 
   const loadReport = async () => {
     setLoading(true);
     try {
-      const data = await getHRDetailedReport();
+      const [data, deptList] = await Promise.all([
+        getHRDetailedReport(departmentFilter),
+        getDepartments(),
+      ]);
       setReportRows(data);
+      setDepartments(deptList);
     } catch (err: any) {
       showToast(err.message || 'Failed to load report data', 'error');
     } finally {
@@ -37,12 +49,12 @@ export default function HRReportsPage() {
 
   useEffect(() => {
     loadReport();
-  }, []);
+  }, [departmentFilter]);
 
   const handleExportExcel = async () => {
     try {
       showToast('Generating Excel progress report...', 'info');
-      const base64 = await exportReportToExcel();
+      const base64 = await exportReportToExcel(departmentFilter);
       const link = document.createElement('a');
       link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`;
       link.download = `Induction_Compliance_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -68,112 +80,149 @@ export default function HRReportsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalCertified = reportRows.filter((r) => r.isCompleted).length;
+  const avgScore = reportRows.length > 0
+    ? Math.round(reportRows.reduce((acc, r) => acc + (r.bestScore || 0), 0) / reportRows.length)
+    : 0;
+
+  const columns: Column<any>[] = [
+    {
+      key: 'employeeId',
+      header: 'Employee ID',
+      render: (row) => (
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">
+          {row.employeeId}
+        </span>
+      ),
+    },
+    {
+      key: 'name',
+      header: 'Employee Name',
+      render: (row) => <span className="font-bold text-slate-900">{row.name}</span>,
+    },
+    {
+      key: 'department',
+      header: 'Department',
+      render: (row) => <Badge variant="info">{row.department}</Badge>,
+    },
+    {
+      key: 'progressPercent',
+      header: 'Induction Progression',
+      width: '200px',
+      render: (row) => <ProgressBar progress={row.progressPercent} size="sm" showLabel={true} color="emerald" />,
+    },
+    {
+      key: 'completedLessonsCount',
+      header: 'Lessons Completed',
+      align: 'center',
+      render: (row) => (
+        <span className="font-semibold text-slate-700">
+          {row.completedLessonsCount} / {row.totalLessons}
+        </span>
+      ),
+    },
+    {
+      key: 'attemptsCount',
+      header: 'Attempts',
+      align: 'center',
+      render: (row) => <span className="font-bold text-slate-800">{row.attemptsCount}</span>,
+    },
+    {
+      key: 'bestScore',
+      header: 'Best Score',
+      align: 'center',
+      render: (row) => <span className="font-bold text-blue-600 font-mono">{row.bestScore}%</span>,
+    },
+    {
+      key: 'certificateStatus',
+      header: 'Status',
+      align: 'right',
+      render: (row) => (
+        <Badge variant={row.isCompleted ? 'purple' : 'warning'}>
+          {row.certificateStatus}
+        </Badge>
+      ),
+    },
+  ];
+
+  const pageSize = 10;
+  const totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
+  const paginatedRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
+
   return (
-    <div className="space-y-6">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Reports & Compliance Analytics</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Detailed breakdown of employee completion rates, scores, and assessment attempt metrics.
-          </p>
-        </div>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <PageHeader
+        title="Compliance & Analytics Reports"
+        description="Detailed department-wise breakdown of employee completion rates, assessment scores, and attempt metrics."
+        breadcrumbs={[{ label: 'Compliance Reports' }]}
+        primaryAction={
+          <Button variant="primary" icon={FileSpreadsheet} onClick={handleExportExcel}>
+            Export Excel Report
+          </Button>
+        }
+        stats={[
+          { title: 'Total Evaluated', value: reportRows.length, subtitle: 'Corporate Enrolled Staff', icon: BarChart3, color: 'blue' },
+          { title: 'Certified Staff', value: totalCertified, subtitle: 'Passed Assessment', icon: CheckCircle2, color: 'emerald' },
+          { title: 'Avg Assessment Score', value: `${avgScore}%`, subtitle: 'Benchmark Average', icon: Award, color: 'purple' },
+        ]}
+      />
 
-        <button
-          onClick={handleExportExcel}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all self-start sm:self-auto"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span>Export Full Excel Report</span>
-        </button>
-      </div>
+      {/* Analytics Data Table */}
+      <DataTable
+        columns={columns}
+        data={paginatedRows}
+        loading={loading}
+        searchPlaceholder="Filter by ID, name, department..."
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        page={page}
+        totalPages={totalPages}
+        totalRecords={filteredRows.length}
+        onPageChange={(p) => setPage(p)}
+        filterControls={
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+              <Filter className="w-3.5 h-3.5" />
+              <span>Dept:</span>
+              <select
+                value={departmentFilter}
+                onChange={(e) => {
+                  setDepartmentFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              >
+                <option value="ALL">All Departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.code})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {/* Filter controls */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Filter by ID, name, department..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <span className="text-xs font-semibold text-slate-500">Status:</span>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-          >
-            <option value="ALL">All Employees</option>
-            <option value="COMPLETED">Completed & Certified</option>
-            <option value="PENDING">Pending Induction</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider">
-                <th className="py-3.5 px-4">Employee ID</th>
-                <th className="py-3.5 px-4">Employee Name</th>
-                <th className="py-3.5 px-4">Department</th>
-                <th className="py-3.5 px-4">Overall Progress</th>
-                <th className="py-3.5 px-4 text-center">Lessons</th>
-                <th className="py-3.5 px-4 text-center">Attempts</th>
-                <th className="py-3.5 px-4 text-center">Best Score</th>
-                <th className="py-3.5 px-4 text-right">Certificate Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
-                    Computing Compliance Analytics...
-                  </td>
-                </tr>
-              ) : filteredRows.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
-                    No matching records found.
-                  </td>
-                </tr>
-              ) : (
-                filteredRows.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{row.employeeId}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-900">{row.name}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{row.department}</td>
-                    <td className="py-3.5 px-4 w-48">
-                      <ProgressBar progress={row.progressPercent} size="sm" showLabel={true} />
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-medium text-slate-700">
-                      {row.completedLessonsCount} / {row.totalLessons}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                      {row.attemptsCount}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-blue-600">
-                      {row.bestScore}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Badge variant={row.isCompleted ? 'purple' : 'warning'}>
-                        {row.certificateStatus}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+              <span>Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              >
+                <option value="ALL">All Employees</option>
+                <option value="COMPLETED">Completed & Certified</option>
+                <option value="PENDING">Pending Induction</option>
+              </select>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

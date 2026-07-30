@@ -13,7 +13,10 @@ import {
 import { useToast } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
-import { validateEmployeeData, validateDepartment } from '@/lib/validation';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { DataTable, Column } from '@/components/ui/DataTable';
+import { validateEmployeeData } from '@/lib/validation';
 import {
   Users,
   UserPlus,
@@ -24,18 +27,11 @@ import {
   Edit2,
   Trash2,
   Eye,
-  ChevronLeft,
-  ChevronRight,
   FileSpreadsheet,
+  CheckCircle2,
+  Clock,
+  Building2,
 } from 'lucide-react';
-
-const DEFAULT_DEPARTMENTS = [
-  'Engineering',
-  'Human Resources',
-  'Product Management',
-  'Finance',
-  'Marketing',
-];
 
 export default function HREmployeesPage() {
   const { showToast } = useToast();
@@ -46,35 +42,32 @@ export default function HREmployeesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
 
-  // Departments List dynamically populated from table below
-  const [departmentsList, setDepartmentsList] = useState<string[]>(DEFAULT_DEPARTMENTS);
-  const [isCustomDept, setIsCustomDept] = useState(false);
-
-  // Search & Filters
+  const [departmentsList, setDepartmentsList] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // Employee Edit / Add Modal state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Employee Add/Edit Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
   const [formLoading, setFormLoading] = useState(false);
 
-  // Form Fields
   const [formData, setFormData] = useState({
     employeeId: '',
     firstName: '',
     middleName: '',
     lastName: '',
     email: '',
-    department: 'Engineering',
-    designation: 'Software Engineer',
+    department: '',
+    designation: 'Staff',
     office: 'Corporate HQ',
     joiningDate: new Date().toISOString().split('T')[0],
     status: 'ACTIVE',
   });
 
-  // Excel Import Modal state
+  // Excel Import Modal
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
@@ -94,8 +87,7 @@ export default function HREmployeesPage() {
       setTotalPages(res.totalPages);
 
       if (res.departments && res.departments.length > 0) {
-        const merged = Array.from(new Set([...DEFAULT_DEPARTMENTS, ...res.departments])).sort();
-        setDepartmentsList(merged);
+        setDepartmentsList(res.departments);
       }
     } catch (err: any) {
       showToast(err.message || 'Failed to fetch employee directory', 'error');
@@ -110,15 +102,14 @@ export default function HREmployeesPage() {
 
   const handleOpenAddModal = () => {
     setEditingEmployee(null);
-    setIsCustomDept(false);
     setFormData({
       employeeId: '',
       firstName: '',
       middleName: '',
       lastName: '',
       email: '',
-      department: departmentsList[0] || 'Engineering',
-      designation: 'Software Engineer',
+      department: departmentsList[0] || 'IT',
+      designation: 'Staff Employee',
       office: 'Corporate HQ',
       joiningDate: new Date().toISOString().split('T')[0],
       status: 'ACTIVE',
@@ -128,8 +119,6 @@ export default function HREmployeesPage() {
 
   const handleOpenEditModal = (emp: any) => {
     setEditingEmployee(emp);
-    const exists = departmentsList.includes(emp.department);
-    setIsCustomDept(!exists);
     setFormData({
       employeeId: emp.employeeId,
       firstName: emp.firstName,
@@ -256,220 +245,186 @@ export default function HREmployeesPage() {
     }
   };
 
+  // Table Columns Definition
+  const columns: Column<any>[] = [
+    {
+      key: 'employeeId',
+      header: 'Employee ID',
+      render: (row) => (
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">
+          {row.employeeId}
+        </span>
+      ),
+    },
+    {
+      key: 'name',
+      header: 'Full Name & Email',
+      render: (row) => {
+        const fullName = `${row.firstName} ${row.middleName ? row.middleName + ' ' : ''}${row.lastName}`;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+              {row.firstName.charAt(0)}
+            </div>
+            <div>
+              <Link href={`/hr/employees/${row.id}`} className="font-bold text-slate-900 hover:text-blue-600">
+                {fullName}
+              </Link>
+              <p className="text-[11px] text-slate-400 font-medium">{row.email}</p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'department',
+      header: 'Department',
+      render: (row) => <Badge variant="info">{row.department}</Badge>,
+    },
+    {
+      key: 'designation',
+      header: 'Designation',
+      render: (row) => <span className="font-medium text-slate-700">{row.designation}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      render: (row) => (
+        <Badge variant={row.status === 'ACTIVE' ? 'success' : 'danger'}>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'certificate',
+      header: 'Certificate Status',
+      align: 'center',
+      render: (row) => (
+        <Badge variant={row.certificates?.length > 0 ? 'purple' : 'default'}>
+          {row.certificates?.length > 0 ? 'Certified' : 'Pending'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      render: (row) => {
+        const fullName = `${row.firstName} ${row.lastName}`;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <Link href={`/hr/employees/${row.id}`}>
+              <Button variant="ghost" size="sm" icon={Eye} />
+            </Link>
+            <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditModal(row)} />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Trash2}
+              className="text-red-600 hover:bg-red-50"
+              onClick={() => handleDelete(row.id, fullName)}
+            />
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Employee Directory</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Manage employee profiles, onboarding status, Excel bulk import & export.
-          </p>
-        </div>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <PageHeader
+        title="Employee Directory"
+        description="Manage corporate employee profiles, induction status, Excel bulk imports & exports."
+        breadcrumbs={[{ label: 'Employees' }]}
+        primaryAction={
+          <Button variant="primary" icon={UserPlus} onClick={handleOpenAddModal}>
+            Add Employee
+          </Button>
+        }
+        secondaryActions={
+          <>
+            <Button variant="outline" icon={Download} onClick={() => setImportModalOpen(true)}>
+              Import Excel
+            </Button>
+            <Button variant="outline" icon={Upload} onClick={handleExportExcel}>
+              Export Excel
+            </Button>
+          </>
+        }
+        stats={[
+          { title: 'Total Enrolled', value: total, subtitle: 'Corporate Employee Records', icon: Users, color: 'blue' },
+          { title: 'Active Staff', value: employees.filter((e) => e.status === 'ACTIVE').length, subtitle: 'Active Induction Profiles', icon: CheckCircle2, color: 'emerald' },
+          { title: 'Departments', value: departmentsList.length, subtitle: 'Active Organizational Units', icon: Building2, color: 'purple' },
+        ]}
+      />
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => setImportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl shadow-2xs transition-colors"
-          >
-            <Download className="w-4 h-4 text-blue-600" />
-            <span>Import Excel</span>
-          </button>
+      {/* Enterprise Data Table Component */}
+      <DataTable
+        columns={columns}
+        data={employees}
+        loading={loading}
+        searchPlaceholder="Search by Employee ID, name, email..."
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        page={page}
+        totalPages={totalPages}
+        totalRecords={total}
+        onPageChange={(p) => setPage(p)}
+        selectedIds={selectedIds}
+        onSelectAll={(checked) => {
+          if (checked) setSelectedIds(employees.map((e) => e.id));
+          else setSelectedIds([]);
+        }}
+        onSelectRow={(id, checked) => {
+          if (checked) setSelectedIds([...selectedIds, id]);
+          else setSelectedIds(selectedIds.filter((i) => i !== id));
+        }}
+        getRowId={(row) => row.id}
+        filterControls={
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+              <Filter className="w-3.5 h-3.5" />
+              <span>Dept:</span>
+              <select
+                value={departmentFilter}
+                onChange={(e) => {
+                  setDepartmentFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              >
+                <option value="ALL">All Departments</option>
+                {departmentsList.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl shadow-2xs transition-colors"
-          >
-            <Upload className="w-4 h-4 text-emerald-600" />
-            <span>Export Excel</span>
-          </button>
-
-          <button
-            onClick={handleOpenAddModal}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Add Employee</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters & Search Controls Bar */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Search by ID, name, email..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full pl-10 pr-4 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-          />
-        </div>
-
-        {/* Filter Dropdowns */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs font-semibold text-slate-500">Dept:</span>
-            <select
-              value={departmentFilter}
-              onChange={(e) => {
-                setDepartmentFilter(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-            >
-              <option value="ALL">All Departments</option>
-              {departmentsList.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+              <span>Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              >
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </select>
+            </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500">Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-            >
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Directory Data Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider">
-                <th className="py-3.5 px-4">Employee ID</th>
-                <th className="py-3.5 px-4">Full Name</th>
-                <th className="py-3.5 px-4">Department</th>
-                <th className="py-3.5 px-4">Designation</th>
-                <th className="py-3.5 px-4">Office</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4 text-center">Certificate</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
-                    Loading Employee Records...
-                  </td>
-                </tr>
-              ) : employees.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
-                    No employees matching filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                employees.map((emp) => {
-                  const fullName = `${emp.firstName} ${emp.middleName ? emp.middleName + ' ' : ''}${emp.lastName}`;
-                  const hasCert = emp.certificates?.length > 0;
-
-                  return (
-                    <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{emp.employeeId}</td>
-                      <td className="py-3.5 px-4">
-                        <Link
-                          href={`/hr/employees/${emp.id}`}
-                          className="font-bold text-slate-900 hover:text-blue-600"
-                        >
-                          {fullName}
-                        </Link>
-                        <p className="text-[11px] text-slate-400">{emp.email}</p>
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-700">{emp.department}</td>
-                      <td className="py-3.5 px-4 text-slate-600">{emp.designation}</td>
-                      <td className="py-3.5 px-4 text-slate-500">{emp.office}</td>
-                      <td className="py-3.5 px-4">
-                        <Badge variant={emp.status === 'ACTIVE' ? 'success' : 'danger'}>
-                          {emp.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {hasCert ? (
-                          <Badge variant="purple">Issued</Badge>
-                        ) : (
-                          <Badge variant="default">Pending</Badge>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Link
-                            href={`/hr/employees/${emp.id}`}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                            title="View Profile"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </Link>
-                          <button
-                            onClick={() => handleOpenEditModal(emp)}
-                            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
-                            title="Edit Employee"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(emp.id, fullName)}
-                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                            title="Delete Employee"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>Showing {employees.length} of {total} Records</span>
-
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="font-semibold text-slate-700">
-              Page {page} of {totalPages || 1}
-            </span>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-              className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Add / Edit Employee Modal */}
       <Modal
@@ -488,7 +443,7 @@ export default function HREmployeesPage() {
                 placeholder="EMP1006"
                 value={formData.employeeId}
                 onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none uppercase"
+                className="w-full px-3 py-2 text-xs font-mono font-bold uppercase text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               />
             </div>
 
@@ -500,7 +455,7 @@ export default function HREmployeesPage() {
                 placeholder="john.doe@corporate.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               />
             </div>
 
@@ -512,7 +467,7 @@ export default function HREmployeesPage() {
                 placeholder="John"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               />
             </div>
 
@@ -523,7 +478,7 @@ export default function HREmployeesPage() {
                 placeholder="M."
                 value={formData.middleName}
                 onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               />
             </div>
 
@@ -535,70 +490,23 @@ export default function HREmployeesPage() {
                 placeholder="Doe"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               />
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700">Department</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextCustom = !isCustomDept;
-                    setIsCustomDept(nextCustom);
-                    if (nextCustom) {
-                      setFormData({ ...formData, department: '' });
-                    } else {
-                      setFormData({ ...formData, department: departmentsList[0] || 'Engineering' });
-                    }
-                  }}
-                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  {isCustomDept ? '← Select from List' : '+ Custom Dept'}
-                </button>
-              </div>
-
-              {!isCustomDept ? (
-                <select
-                  value={formData.department}
-                  onChange={(e) => {
-                    if (e.target.value === '__CUSTOM__') {
-                      setIsCustomDept(true);
-                      setFormData({ ...formData, department: '' });
-                    } else {
-                      setFormData({ ...formData, department: e.target.value });
-                    }
-                  }}
-                  className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
-                >
-                  <option value="" disabled>Select Department</option>
-                  {departmentsList.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                  <option value="__CUSTOM__">+ Add New Department...</option>
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Quality Assurance"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className={`w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border rounded-xl focus:outline-none ${
-                    !validateDepartment(formData.department).isValid
-                      ? 'border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
-                  }`}
-                />
-              )}
-              {!validateDepartment(formData.department).isValid && (
-                <p className="text-[10px] font-semibold text-red-600 mt-0.5">
-                  {validateDepartment(formData.department).error}
-                </p>
-              )}
+              <label className="text-xs font-bold text-slate-700">Department</label>
+              <select
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="w-full px-3 py-2 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              >
+                {departmentsList.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1">
@@ -609,7 +517,7 @@ export default function HREmployeesPage() {
                 placeholder="Software Engineer"
                 value={formData.designation}
                 onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               />
             </div>
 
@@ -618,53 +526,21 @@ export default function HREmployeesPage() {
               <input
                 type="text"
                 required
-                placeholder="New York HQ"
+                placeholder="Corporate HQ"
                 value={formData.office}
                 onChange={(e) => setFormData({ ...formData, office: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Joining Date</label>
-              <input
-                type="date"
-                required
-                max={new Date().toISOString().split('T')[0]}
-                value={formData.joiningDate}
-                onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
-              >
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
             </div>
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-            >
+            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={formLoading}
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
-            >
-              {formLoading ? 'Saving...' : editingEmployee ? 'Update Profile' : 'Create Record'}
-            </button>
+            </Button>
+            <Button type="submit" variant="primary" loading={formLoading}>
+              {editingEmployee ? 'Update Profile' : 'Create Record'}
+            </Button>
           </div>
         </form>
       </Modal>
@@ -684,28 +560,14 @@ export default function HREmployeesPage() {
                   <FileSpreadsheet className="w-4 h-4 text-blue-600" />
                   <span>Download Excel Import Template</span>
                 </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
                   Pre-formatted Excel sheet with column structure and sample candidate rows.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleDownloadTemplate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Template</span>
-              </button>
-            </div>
-
-            <div className="pt-2 border-t border-slate-200/80 text-[11px] text-slate-600 space-y-1">
-              <p>
-                <strong>Required Columns:</strong> EmployeeID, FirstName, MiddleName, LastName, Email, Department, Designation, Office, JoiningDate, Status.
-              </p>
-              <p className="text-slate-500 italic">
-                Format Note: JoiningDate should be YYYY-MM-DD and must not be in the future.
-              </p>
+              <Button type="button" variant="primary" size="sm" icon={Download} onClick={handleDownloadTemplate}>
+                Template
+              </Button>
             </div>
           </div>
 
@@ -721,20 +583,12 @@ export default function HREmployeesPage() {
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setImportModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-            >
+            <Button type="button" variant="ghost" onClick={() => setImportModalOpen(false)}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={importing || !excelFile}
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
-            >
-              {importing ? 'Processing File...' : 'Upload & Import'}
-            </button>
+            </Button>
+            <Button type="submit" variant="success" loading={importing} disabled={!excelFile}>
+              Upload & Import
+            </Button>
           </div>
         </form>
       </Modal>

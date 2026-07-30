@@ -14,6 +14,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "html2canvas": "^1.4.1",
     "jose": "^5.9.6",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.2",
@@ -41,5 +42,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.19.2",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

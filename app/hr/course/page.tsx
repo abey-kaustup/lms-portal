@@ -15,22 +15,28 @@ import {
   saveAssessmentQuestion,
   deleteAssessmentQuestion,
 } from '@/actions/assessment';
+import { getDepartments } from '@/actions/department';
 import { useToast } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import {
   BookOpen,
   Plus,
   Edit2,
   Trash2,
-  GripVertical,
   PlayCircle,
   FileText,
-  HelpCircle,
   Video,
-  FileCheck2,
   ChevronDown,
   ChevronUp,
+  Building2,
+  ShieldCheck,
+  Layers,
+  HelpCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function HRCoursePage() {
@@ -38,6 +44,7 @@ export default function HRCoursePage() {
 
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState<any>(null);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
 
   // Module Modal state
@@ -45,6 +52,8 @@ export default function HRCoursePage() {
   const [editingModule, setEditingModule] = useState<any>(null);
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleDesc, setModuleDesc] = useState('');
+  const [moduleType, setModuleType] = useState<'COMMON' | 'DEPARTMENT'>('COMMON');
+  const [selectedDeptId, setSelectedDeptId] = useState('');
 
   // Lesson Modal state
   const [lessonModalOpen, setLessonModalOpen] = useState(false);
@@ -59,6 +68,7 @@ export default function HRCoursePage() {
   // Question Modal state
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [questionModuleId, setQuestionModuleId] = useState<string>('');
   const [questionText, setQuestionText] = useState('');
   const [options, setOptions] = useState<string[]>(['Option A', 'Option B', 'Option C', 'Option D']);
   const [correctOptionIndex, setCorrectOptionIndex] = useState(0);
@@ -68,8 +78,13 @@ export default function HRCoursePage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const c = await getCourseWithStructure();
+      const [c, deptList] = await Promise.all([
+        getCourseWithStructure(),
+        getDepartments(),
+      ]);
       setCourse(c);
+      setDepartments(deptList);
+
       if (c?.id) {
         const qList = await getAssessmentQuestions(c.id);
         setQuestions(qList);
@@ -85,11 +100,12 @@ export default function HRCoursePage() {
     loadData();
   }, []);
 
-  // Module actions
   const handleOpenAddModule = () => {
     setEditingModule(null);
     setModuleTitle('');
     setModuleDesc('');
+    setModuleType('COMMON');
+    setSelectedDeptId(departments[0]?.id || '');
     setModuleModalOpen(true);
   };
 
@@ -97,6 +113,8 @@ export default function HRCoursePage() {
     setEditingModule(mod);
     setModuleTitle(mod.title);
     setModuleDesc(mod.description || '');
+    setModuleType(mod.moduleType || 'COMMON');
+    setSelectedDeptId(mod.departmentId || departments[0]?.id || '');
     setModuleModalOpen(true);
   };
 
@@ -105,11 +123,18 @@ export default function HRCoursePage() {
     if (!course) return;
 
     try {
+      if (moduleType === 'DEPARTMENT' && !selectedDeptId) {
+        showToast('Please select a target department', 'error');
+        return;
+      }
+
       if (editingModule) {
         await updateModule({
           id: editingModule.id,
           title: moduleTitle,
           description: moduleDesc,
+          moduleType,
+          departmentId: moduleType === 'DEPARTMENT' ? selectedDeptId : null,
         });
         showToast('Module updated!', 'success');
       } else {
@@ -117,6 +142,8 @@ export default function HRCoursePage() {
           courseId: course.id,
           title: moduleTitle,
           description: moduleDesc,
+          moduleType,
+          departmentId: moduleType === 'DEPARTMENT' ? selectedDeptId : null,
         });
         showToast('Module created!', 'success');
       }
@@ -138,7 +165,6 @@ export default function HRCoursePage() {
     }
   };
 
-  // Reorder modules up/down
   const handleMoveModule = async (index: number, direction: 'UP' | 'DOWN') => {
     if (!course?.modules) return;
     const newMods = [...course.modules];
@@ -154,7 +180,7 @@ export default function HRCoursePage() {
     loadData();
   };
 
-  // Lesson actions
+  // Lesson Handlers
   const handleOpenAddLesson = (moduleId: string) => {
     setEditingLesson(null);
     setSelectedModuleId(moduleId);
@@ -208,9 +234,10 @@ export default function HRCoursePage() {
     }
   };
 
-  // Question actions
+  // Question Handlers
   const handleOpenAddQuestion = () => {
     setEditingQuestion(null);
+    setQuestionModuleId(course?.modules[0]?.id || '');
     setQuestionText('');
     setOptions(['Option A', 'Option B', 'Option C', 'Option D']);
     setCorrectOptionIndex(0);
@@ -221,6 +248,7 @@ export default function HRCoursePage() {
 
   const handleOpenEditQuestion = (q: any) => {
     setEditingQuestion(q);
+    setQuestionModuleId(q.moduleId || course?.modules[0]?.id || '');
     setQuestionText(q.questionText);
     setOptions(q.options || ['Option A', 'Option B', 'Option C', 'Option D']);
     setCorrectOptionIndex(q.correctOptionIndex);
@@ -237,6 +265,7 @@ export default function HRCoursePage() {
       await saveAssessmentQuestion({
         id: editingQuestion?.id,
         courseId: course.id,
+        moduleId: questionModuleId || null,
         questionText,
         options,
         correctOptionIndex,
@@ -267,182 +296,244 @@ export default function HRCoursePage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-3">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-slate-500">Loading Course Architecture...</p>
+          <p className="text-xs font-semibold text-slate-500">Loading Curriculum Architecture...</p>
         </div>
       </div>
     );
   }
 
+  const commonModules = course?.modules?.filter((m: any) => m.moduleType === 'COMMON') || [];
+  const deptModules = course?.modules?.filter((m: any) => m.moduleType === 'DEPARTMENT') || [];
+  const totalLessons = course?.modules?.reduce((acc: number, m: any) => acc + m.lessons.length, 0) || 0;
+
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Course Architecture & Content</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Configure induction modules, attach SharePoint Video & PDF links, and manage assessment questions.
-          </p>
-        </div>
+      {/* Page Header with Stats */}
+      <PageHeader
+        title="Curriculum Architecture Builder"
+        description="Single course framework supporting Common Modules (mandatory for all) and Department Modules."
+        breadcrumbs={[{ label: 'Curriculum Builder' }]}
+        primaryAction={
+          <Button variant="primary" icon={Plus} onClick={handleOpenAddModule}>
+            Add New Module
+          </Button>
+        }
+        stats={[
+          { title: 'Total Modules', value: course?.modules?.length || 0, subtitle: 'Common + Department', icon: BookOpen, color: 'blue' },
+          { title: 'Common Modules', value: commonModules.length, subtitle: 'Mandatory for All Employees', icon: ShieldCheck, color: 'emerald' },
+          { title: 'Department Modules', value: deptModules.length, subtitle: 'Department Specialized', icon: Building2, color: 'purple' },
+          { title: 'Assessment Questions', value: questions.length, subtitle: 'Proctored Bank Questions', icon: HelpCircle, color: 'slate' },
+        ]}
+      />
 
-        <button
-          onClick={handleOpenAddModule}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Module</span>
-        </button>
-      </div>
-
-      {/* Modules List */}
-      <div className="space-y-6">
-        {course?.modules.map((mod: any, mIdx: number) => (
-          <div key={mod.id} className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-4">
-            {/* Module Top Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <button
-                    disabled={mIdx === 0}
-                    onClick={() => handleMoveModule(mIdx, 'UP')}
-                    className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-slate-600"
-                    title="Move Module Up"
-                  >
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    disabled={mIdx === course.modules.length - 1}
-                    onClick={() => handleMoveModule(mIdx, 'DOWN')}
-                    className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-slate-600"
-                    title="Move Module Down"
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <div>
-                  <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
-                    Module 0{mIdx + 1}
-                  </span>
-                  <h3 className="text-base font-bold text-slate-900">{mod.title}</h3>
-                  {mod.description && <p className="text-xs text-slate-500 mt-0.5">{mod.description}</p>}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleOpenAddLesson(mod.id)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Lesson</span>
-                </button>
-                <button
-                  onClick={() => handleOpenEditModule(mod)}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
-                  title="Edit Module"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteModule(mod.id, mod.title)}
-                  className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                  title="Delete Module"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+      {/* 1. Common Modules Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-
-            {/* Lessons Table / List */}
-            <div className="space-y-2.5">
-              {mod.lessons.length === 0 ? (
-                <p className="text-xs text-slate-400 italic py-2">No lessons added to this module yet.</p>
-              ) : (
-                mod.lessons.map((les: any, lIdx: number) => (
-                  <div
-                    key={les.id}
-                    className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-white border border-slate-200 text-blue-600">
-                        {les.contentType === 'VIDEO' && <Video className="w-4 h-4" />}
-                        {les.contentType === 'PDF' && <FileText className="w-4 h-4" />}
-                        {les.contentType === 'VIDEO_PDF' && <PlayCircle className="w-4 h-4" />}
-                      </div>
-
-                      <div>
-                        <p className="font-bold text-slate-900">{les.title}</p>
-                        <p className="text-slate-500 text-[11px] line-clamp-1">{les.description}</p>
-                        <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-400 font-mono">
-                          {les.videoUrl && <span>Video: {les.videoUrl.substring(0, 45)}...</span>}
-                          {les.pdfUrl && <span>PDF: {les.pdfUrl.substring(0, 45)}...</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
-                      <Badge variant="info">{les.contentType}</Badge>
-                      <button
-                        onClick={() => handleOpenEditLesson(les)}
-                        className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
-                        title="Edit Lesson"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteLesson(les.id, les.title)}
-                        className="p-1.5 rounded-lg bg-red-50 border border-red-100 hover:bg-red-100 text-red-600 transition-colors"
-                        title="Delete Lesson"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div>
+              <h3 className="text-base font-bold text-slate-900">1. Common Modules</h3>
+              <p className="text-xs text-slate-500 font-medium">Mandatory induction modules for every corporate employee</p>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Assessment Questions Management Section */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <span className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">Evaluation</span>
-            <h3 className="text-lg font-bold text-slate-900 mt-0.5">Final Assessment Questions</h3>
-            <p className="text-xs text-slate-500">Configure MCQ single-correct questions, correct answer options, and points.</p>
-          </div>
-
-          <button
-            onClick={handleOpenAddQuestion}
-            className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Question</span>
-          </button>
+          <Badge variant="info">Mandatory Core</Badge>
         </div>
 
         <div className="space-y-4">
+          {commonModules.map((mod: any, mIdx: number) => (
+            <Card key={mod.id}>
+              <CardHeader className="flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-1">
+                    <button
+                      disabled={mIdx === 0}
+                      onClick={() => handleMoveModule(mIdx, 'UP')}
+                      className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-slate-600"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      disabled={mIdx === commonModules.length - 1}
+                      onClick={() => handleMoveModule(mIdx, 'DOWN')}
+                      className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 text-slate-600"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                        Common Module 0{mIdx + 1}
+                      </span>
+                      <Badge variant="success">COMMON</Badge>
+                    </div>
+                    <CardTitle className="mt-0.5">{mod.title}</CardTitle>
+                    {mod.description && <CardDescription className="mt-0.5">{mod.description}</CardDescription>}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" icon={Plus} onClick={() => handleOpenAddLesson(mod.id)}>
+                    Add Lesson
+                  </Button>
+                  <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditModule(mod)} />
+                  <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteModule(mod.id, mod.title)} />
+                </div>
+              </CardHeader>
+
+              <CardContent className="pt-4 space-y-2">
+                {mod.lessons.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-2">No lessons added to this module yet.</p>
+                ) : (
+                  mod.lessons.map((les: any) => (
+                    <div
+                      key={les.id}
+                      className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-white border border-slate-200 text-blue-600 shadow-soft-xs">
+                          {les.contentType === 'VIDEO' && <Video className="w-4 h-4" />}
+                          {les.contentType === 'PDF' && <FileText className="w-4 h-4" />}
+                          {les.contentType === 'VIDEO_PDF' && <PlayCircle className="w-4 h-4" />}
+                        </div>
+
+                        <div>
+                          <p className="font-bold text-slate-900">{les.title}</p>
+                          <p className="text-slate-500 text-[11px] font-medium line-clamp-1">{les.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <Badge variant="info">{les.contentType}</Badge>
+                        <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditLesson(les)} />
+                        <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteLesson(les.id, les.title)} />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Department Modules Section */}
+      <div className="space-y-4 pt-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-xl border border-purple-100">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">2. Department-Specific Modules</h3>
+              <p className="text-xs text-slate-500 font-medium">Unlocked automatically after completing common induction modules</p>
+            </div>
+          </div>
+          <Badge variant="warning">Unlocked Post Common</Badge>
+        </div>
+
+        <div className="space-y-4">
+          {deptModules.map((mod: any, mIdx: number) => (
+            <Card key={mod.id}>
+              <CardHeader className="flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">
+                        Department Training
+                      </span>
+                      <Badge variant="purple">{mod.department?.name || 'Assigned Dept'}</Badge>
+                    </div>
+                    <CardTitle className="mt-0.5">{mod.title}</CardTitle>
+                    {mod.description && <CardDescription className="mt-0.5">{mod.description}</CardDescription>}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" icon={Plus} onClick={() => handleOpenAddLesson(mod.id)}>
+                    Add Lesson
+                  </Button>
+                  <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditModule(mod)} />
+                  <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteModule(mod.id, mod.title)} />
+                </div>
+              </CardHeader>
+
+              <CardContent className="pt-4 space-y-2">
+                {mod.lessons.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-2">No lessons added to this department module yet.</p>
+                ) : (
+                  mod.lessons.map((les: any) => (
+                    <div
+                      key={les.id}
+                      className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-white border border-slate-200 text-purple-600 shadow-soft-xs">
+                          {les.contentType === 'VIDEO' && <Video className="w-4 h-4" />}
+                          {les.contentType === 'PDF' && <FileText className="w-4 h-4" />}
+                          {les.contentType === 'VIDEO_PDF' && <PlayCircle className="w-4 h-4" />}
+                        </div>
+
+                        <div>
+                          <p className="font-bold text-slate-900">{les.title}</p>
+                          <p className="text-slate-500 text-[11px] font-medium line-clamp-1">{les.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <Badge variant="purple">{les.contentType}</Badge>
+                        <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditLesson(les)} />
+                        <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteLesson(les.id, les.title)} />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Assessment Question Bank Manager */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between gap-4">
+          <div>
+            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Evaluation Bank</span>
+            <CardTitle className="mt-0.5">Assessment Question Bank</CardTitle>
+            <CardDescription>
+              Questions linked to Common modules are delivered to all employees. Questions linked to Department modules are delivered only to that department.
+            </CardDescription>
+          </div>
+
+          <Button variant="primary" icon={Plus} onClick={handleOpenAddQuestion}>
+            Add Question
+          </Button>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
           {questions.map((q, idx) => (
-            <div key={q.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 space-y-2.5 text-xs">
+            <div key={q.id} className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200/60 space-y-2.5 text-xs">
               <div className="flex items-start justify-between">
-                <span className="font-bold text-slate-900">
-                  Q{idx + 1}: {q.questionText}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => handleOpenEditQuestion(q)}
-                    className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteQuestion(q.id)}
-                    className="p-1.5 rounded-lg bg-red-50 border border-red-100 hover:bg-red-100 text-red-600"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900">
+                      Q{idx + 1}: {q.questionText}
+                    </span>
+                    <Badge variant={q.moduleType === 'DEPARTMENT' ? 'warning' : 'success'}>
+                      {q.moduleType === 'DEPARTMENT' ? `Dept: ${q.departmentName}` : 'Common'}
+                    </Badge>
+                  </div>
+                  {q.moduleTitle && (
+                    <p className="text-[11px] text-slate-500 font-medium">Linked Module: {q.moduleTitle}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditQuestion(q)} />
+                  <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteQuestion(q.id)} />
                 </div>
               </div>
 
@@ -462,8 +553,8 @@ export default function HRCoursePage() {
               </div>
             </div>
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Module Modal */}
       <Modal
@@ -474,14 +565,61 @@ export default function HRCoursePage() {
       >
         <form onSubmit={handleSaveModule} className="space-y-4">
           <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700">Module Category</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setModuleType('COMMON')}
+                className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                  moduleType === 'COMMON'
+                    ? 'bg-blue-50 border-blue-600 text-blue-900 ring-2 ring-blue-500/20'
+                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}
+              >
+                Common Module (Mandatory for All)
+              </button>
+              <button
+                type="button"
+                onClick={() => setModuleType('DEPARTMENT')}
+                className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                  moduleType === 'DEPARTMENT'
+                    ? 'bg-purple-50 border-purple-600 text-purple-900 ring-2 ring-purple-500/20'
+                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}
+              >
+                Department-Specific Module
+              </button>
+            </div>
+          </div>
+
+          {moduleType === 'DEPARTMENT' && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700">Target Department</label>
+              <select
+                value={selectedDeptId}
+                onChange={(e) => setSelectedDeptId(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-semibold"
+              >
+                <option value="">Select Department...</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="space-y-1">
             <label className="text-xs font-bold text-slate-700">Module Title</label>
             <input
               type="text"
               required
-              placeholder="e.g. Module 1: Welcome & Corporate Culture"
+              placeholder="e.g. IT Department: Git Workflow & Code Guidelines"
               value={moduleTitle}
               onChange={(e) => setModuleTitle(e.target.value)}
-              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
             />
           </div>
 
@@ -492,24 +630,17 @@ export default function HRCoursePage() {
               placeholder="Overview of module learning objectives..."
               value={moduleDesc}
               onChange={(e) => setModuleDesc(e.target.value)}
-              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
             />
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setModuleModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
+            <Button type="button" variant="ghost" onClick={() => setModuleModalOpen(false)}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs"
-            >
+            </Button>
+            <Button type="submit" variant="primary">
               Save Module
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -527,10 +658,10 @@ export default function HRCoursePage() {
             <input
               type="text"
               required
-              placeholder="e.g. Lesson 1.1: Executive Welcome"
+              placeholder="e.g. IT Lesson 1: Development Standards"
               value={lessonTitle}
               onChange={(e) => setLessonTitle(e.target.value)}
-              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
             />
           </div>
 
@@ -539,7 +670,7 @@ export default function HRCoursePage() {
             <select
               value={contentType}
               onChange={(e) => setContentType(e.target.value as any)}
-              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-semibold"
             >
               <option value="VIDEO">Video Only</option>
               <option value="PDF">PDF Document Only</option>
@@ -556,7 +687,7 @@ export default function HRCoursePage() {
                 placeholder="https://corporate.sharepoint.com/:v:/s/learning/video.mp4"
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-mono"
               />
             </div>
           )}
@@ -570,7 +701,7 @@ export default function HRCoursePage() {
                 placeholder="https://corporate.sharepoint.com/:b:/s/learning/handbook.pdf"
                 value={pdfUrl}
                 onChange={(e) => setPdfUrl(e.target.value)}
-                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-mono"
               />
             </div>
           )}
@@ -582,24 +713,17 @@ export default function HRCoursePage() {
               placeholder="Brief overview of content..."
               value={lessonDesc}
               onChange={(e) => setLessonDesc(e.target.value)}
-              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
             />
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setLessonModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
+            <Button type="button" variant="ghost" onClick={() => setLessonModalOpen(false)}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs"
-            >
+            </Button>
+            <Button type="submit" variant="primary">
               Save Lesson
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -613,6 +737,23 @@ export default function HRCoursePage() {
       >
         <form onSubmit={handleSaveQuestion} className="space-y-4">
           <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700">Associated Module</label>
+            <select
+              value={questionModuleId}
+              onChange={(e) => setQuestionModuleId(e.target.value)}
+              required
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-semibold"
+            >
+              <option value="">Select Associated Module...</option>
+              {course?.modules?.map((m: any) => (
+                <option key={m.id} value={m.id}>
+                  [{m.moduleType}] {m.title} {m.department ? `(${m.department.name})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
             <label className="text-xs font-bold text-slate-700">Question Text</label>
             <textarea
               rows={2}
@@ -620,7 +761,7 @@ export default function HRCoursePage() {
               placeholder="Enter assessment question..."
               value={questionText}
               onChange={(e) => setQuestionText(e.target.value)}
-              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
             />
           </div>
 
@@ -645,7 +786,7 @@ export default function HRCoursePage() {
                     newOpts[oIdx] = e.target.value;
                     setOptions(newOpts);
                   }}
-                  className="flex-1 px-3 py-1.5 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                  className="flex-1 px-3 py-1.5 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
                 />
               </div>
             ))}
@@ -658,24 +799,17 @@ export default function HRCoursePage() {
               placeholder="Why this option is correct..."
               value={explanation}
               onChange={(e) => setExplanation(e.target.value)}
-              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+              className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium"
             />
           </div>
 
           <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setQuestionModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
+            <Button type="button" variant="ghost" onClick={() => setQuestionModalOpen(false)}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs"
-            >
+            </Button>
+            <Button type="submit" variant="primary">
               Save Question
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>

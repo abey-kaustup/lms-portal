@@ -10,7 +10,20 @@ export async function getEmployeeLearningState() {
     throw new Error('Unauthorized');
   }
 
-  // 1. Fetch course with modules and lessons
+  // 1. Fetch employee details including department relation
+  const employee = await prisma.employee.findUnique({
+    where: { id: session.id },
+    include: { departmentRel: true },
+  });
+
+  if (!employee) {
+    throw new Error('Employee record not found');
+  }
+
+  const employeeDeptId = employee.departmentId;
+  const employeeDeptName = employee.department;
+
+  // 2. Fetch induction course with modules and lessons
   const course = await prisma.course.findFirst({
     where: { isDeleted: false },
     include: {
@@ -18,6 +31,7 @@ export async function getEmployeeLearningState() {
         where: { isDeleted: false },
         orderBy: { sortOrder: 'asc' },
         include: {
+          department: true,
           lessons: {
             where: { isDeleted: false },
             orderBy: { sortOrder: 'asc' },
@@ -26,6 +40,7 @@ export async function getEmployeeLearningState() {
       },
       assessmentQuestions: {
         where: { isDeleted: false },
+        include: { module: { include: { department: true } } },
       },
     },
   });
@@ -34,7 +49,19 @@ export async function getEmployeeLearningState() {
     throw new Error('No course available');
   }
 
-  // 2. Fetch employee lesson progress
+  // 3. Filter modules to ONLY show Common modules OR Department modules assigned to employee's department
+  const filteredModules = course.modules.filter((mod) => {
+    if (mod.moduleType === 'COMMON') return true;
+    if (mod.moduleType === 'DEPARTMENT') {
+      if (employeeDeptId && mod.departmentId === employeeDeptId) return true;
+      if (mod.department?.name && employeeDeptName && mod.department.name.toLowerCase() === employeeDeptName.toLowerCase()) return true;
+      if (mod.department?.code && employeeDeptName && mod.department.code.toLowerCase() === employeeDeptName.toLowerCase()) return true;
+      return false;
+    }
+    return false;
+  });
+
+  // 4. Fetch employee lesson progress
   const progressList = await prisma.lessonProgress.findMany({
     where: { employeeId: session.id },
   });
@@ -48,7 +75,7 @@ export async function getEmployeeLearningState() {
     });
   });
 
-  // 3. Fetch assessment attempts & certificates
+  // 5. Fetch assessment attempts & certificates
   const passedAttempt = await prisma.assessmentAttempt.findFirst({
     where: { employeeId: session.id, courseId: course.id, passed: true },
   });
@@ -59,15 +86,28 @@ export async function getEmployeeLearningState() {
 
   const isCourseFullyCompleted = Boolean(passedAttempt);
 
-  // 4. Calculate total lessons and completed lessons count
+  // 6. Calculate counts across assigned modules
   let totalLessonsCount = 0;
   let completedLessonsCount = 0;
 
-  course.modules.forEach((mod) => {
+  let commonLessonsCount = 0;
+  let commonCompletedCount = 0;
+
+  let deptLessonsCount = 0;
+  let deptCompletedCount = 0;
+
+  filteredModules.forEach((mod) => {
     mod.lessons.forEach((les) => {
       totalLessonsCount++;
-      if (progressMap.get(les.id)?.isCompleted) {
-        completedLessonsCount++;
+      const isDone = Boolean(progressMap.get(les.id)?.isCompleted);
+      if (isDone) completedLessonsCount++;
+
+      if (mod.moduleType === 'COMMON') {
+        commonLessonsCount++;
+        if (isDone) commonCompletedCount++;
+      } else {
+        deptLessonsCount++;
+        if (isDone) deptCompletedCount++;
       }
     });
   });
@@ -76,26 +116,45 @@ export async function getEmployeeLearningState() {
     ? Math.round((completedLessonsCount / totalLessonsCount) * 100)
     : 0;
 
-  // 5. Evaluate sequential lock status for modules & lessons
-  let previousModuleCompleted = true; // First module is unlocked
+  const commonProgressPercentage = commonLessonsCount > 0
+    ? Math.round((commonCompletedCount / commonLessonsCount) * 100)
+    : 0;
 
-  const processedModules = course.modules.map((mod, modIdx) => {
+  const deptProgressPercentage = deptLessonsCount > 0
+    ? Math.round((deptCompletedCount / deptLessonsCount) * 100)
+    : 0;
+
+  const allCommonCompleted = commonCompletedCount === commonLessonsCount && commonLessonsCount > 0;
+
+  const isMasterTester = Boolean(employee.isMasterTester || session.identifier === 'EMP7777');
+
+  // 7. Evaluate sequential lock status for modules & lessons
+  // RULE: If isMasterTester === true, bypass ALL restrictions and unlock everything!
+  let previousModuleCompleted = true; // First common module is unlocked
+
+  const processedModules = filteredModules.map((mod, modIdx) => {
     let previousLessonCompleted = true; // First lesson in module is unlocked if module unlocked
 
-    const isModuleUnlocked = isCourseFullyCompleted || previousModuleCompleted;
+    let isModuleUnlocked = false;
+    if (isMasterTester || isCourseFullyCompleted) {
+      isModuleUnlocked = true;
+    } else if (mod.moduleType === 'COMMON') {
+      isModuleUnlocked = previousModuleCompleted;
+    } else if (mod.moduleType === 'DEPARTMENT') {
+      isModuleUnlocked = allCommonCompleted && previousModuleCompleted;
+    }
 
-    let moduleAllLessonsCompleted = true;
+    let moduleAllLessonsCompleted = isMasterTester ? true : true;
 
-    const processedLessons = mod.lessons.map((les, lesIdx) => {
+    const processedLessons = mod.lessons.map((les) => {
       const p = progressMap.get(les.id);
-      const isCompleted = p?.isCompleted ?? false;
+      const isCompleted = isMasterTester ? true : (p?.isCompleted ?? false);
 
-      if (!isCompleted) {
+      if (!isCompleted && !isMasterTester) {
         moduleAllLessonsCompleted = false;
       }
 
-      // Lesson unlocked if course finished OR (module unlocked AND previous lesson completed)
-      const isLessonUnlocked = isCourseFullyCompleted || (isModuleUnlocked && previousLessonCompleted);
+      const isLessonUnlocked = isMasterTester || isCourseFullyCompleted || (isModuleUnlocked && previousLessonCompleted);
 
       previousLessonCompleted = isCompleted;
 
@@ -103,8 +162,8 @@ export async function getEmployeeLearningState() {
         ...les,
         isCompleted,
         isUnlocked: isLessonUnlocked,
-        watchedSeconds: p?.watchedSeconds ?? 0,
-        totalSeconds: p?.totalSeconds ?? 0,
+        watchedSeconds: p?.watchedSeconds ?? (isMasterTester ? 100 : 0),
+        totalSeconds: p?.totalSeconds ?? (isMasterTester ? 100 : 0),
       };
     });
 
@@ -113,23 +172,37 @@ export async function getEmployeeLearningState() {
     return {
       ...mod,
       isUnlocked: isModuleUnlocked,
-      isCompleted: moduleAllLessonsCompleted,
+      isCompleted: isMasterTester ? true : moduleAllLessonsCompleted,
       lessons: processedLessons,
     };
   });
 
-  const allLessonsCompleted = completedLessonsCount === totalLessonsCount && totalLessonsCount > 0;
-  const isAssessmentUnlocked = isCourseFullyCompleted || allLessonsCompleted;
+  const allLessonsCompleted = isMasterTester ? true : (completedLessonsCount === totalLessonsCount && totalLessonsCount > 0);
+  const isAssessmentUnlocked = isMasterTester || isCourseFullyCompleted || (allCommonCompleted && allLessonsCompleted);
+
+  const commonModules = processedModules.filter((m) => m.moduleType === 'COMMON');
+  const departmentModules = processedModules.filter((m) => m.moduleType === 'DEPARTMENT');
 
   return {
+    employee,
+    isMasterTester,
     course: {
       ...course,
       modules: processedModules,
     },
+    commonModules,
+    departmentModules,
     totalLessonsCount,
-    completedLessonsCount,
-    overallProgressPercentage,
-    allLessonsCompleted,
+    completedLessonsCount: isMasterTester ? totalLessonsCount : completedLessonsCount,
+    commonLessonsCount,
+    commonCompletedCount: isMasterTester ? commonLessonsCount : commonCompletedCount,
+    commonProgressPercentage: isMasterTester ? 100 : commonProgressPercentage,
+    deptLessonsCount,
+    deptCompletedCount: isMasterTester ? deptLessonsCount : deptCompletedCount,
+    deptProgressPercentage: isMasterTester ? 100 : deptProgressPercentage,
+    overallProgressPercentage: isMasterTester ? 100 : overallProgressPercentage,
+    allCommonCompleted: isMasterTester ? true : allCommonCompleted,
+    allLessonsCompleted: isMasterTester ? true : allLessonsCompleted,
     isAssessmentUnlocked,
     isCourseFullyCompleted,
     passedAttempt,

@@ -1,5 +1,16 @@
 export type Role = 'HR_ADMIN' | 'EMPLOYEE';
 
+export interface DepartmentItem {
+  id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  _count?: {
+    employees: number;
+    modules: number;
+  };
+}
+
 export interface UserSession {
   id: string; // Database ID
   identifier: string; // Username for HR or EmployeeID for Employee
@@ -7,20 +18,25 @@ export interface UserSession {
   email?: string;
   role: Role;
   department?: string;
+  departmentId?: string | null;
   designation?: string;
+  isMasterTester?: boolean;
 }
 
 export interface EmployeeFormData {
+  id?: string;
   employeeId: string;
   firstName: string;
   middleName?: string;
   lastName: string;
   email: string;
   department: string;
+  departmentId?: string | null;
   designation: string;
   office: string;
   joiningDate: string;
   status: 'ACTIVE' | 'INACTIVE';
+  isMasterTester?: boolean;
 }
 
 export interface ModuleFormData {
@@ -28,6 +44,8 @@ export interface ModuleFormData {
   courseId: string;
   title: string;
   description?: string;
+  moduleType: 'COMMON' | 'DEPARTMENT';
+  departmentId?: string | null;
   sortOrder: number;
 }
 
@@ -46,6 +64,7 @@ export interface LessonFormData {
 export interface QuestionFormData {
   id?: string;
   courseId: string;
+  moduleId?: string | null;
   questionText: string;
   options: string[];
   correctOptionIndex: number;
@@ -58,3 +77,4 @@ export interface AntiCheatLogPayload {
   action: 'TAB_SWITCH' | 'WINDOW_BLUR' | 'FULLSCREEN_EXIT';
   details?: string;
 }
+
