@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { logoutClient } from '@/lib/auth-client';
 import {
   LayoutDashboard,
   Building2,
@@ -56,10 +57,7 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
   const pathname = usePathname();
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (e) {}
-    window.location.href = '/login';
+    await logoutClient();
   };
 
   return (
@@ -73,14 +71,14 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
       )}
 
       <aside
-        className={`fixed md:sticky top-0 left-0 z-50 h-screen w-[260px] bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shrink-0 transition-transform duration-300 ${
+        className={`fixed md:sticky top-0 left-0 z-50 h-screen w-[260px] apple-glass-dark text-slate-300 flex flex-col justify-between shrink-0 transition-transform duration-300 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Top Logo & App Brand Header */}
         <div className="p-5 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 rounded-2xl text-white shadow-soft-md">
+            <div className="p-2.5 bg-gradient-to-b from-blue-500 to-blue-600 rounded-2xl text-white shadow-[0_4px_14px_0_rgba(37,99,235,0.35)] border border-blue-400/30">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
@@ -92,7 +90,7 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
           {/* Employee Induction Quick Access Switcher Card */}
           <Link
             href="/employee/dashboard"
-            className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-all text-sm font-medium group"
+            className="flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-sm font-medium group backdrop-blur-md"
           >
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
@@ -105,7 +103,7 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
           <nav className="space-y-6">
             {MENU_GROUPS.map((group, gIdx) => (
               <div key={gIdx} className="space-y-1.5">
-                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   {group.groupLabel}
                 </p>
 
@@ -121,8 +119,8 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
                         onClick={onCloseMobile}
                         className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all relative ${
                           isActive
-                            ? 'bg-blue-600 text-white shadow-soft-sm font-semibold'
-                            : 'text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium'
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_4px_14px_0_rgba(37,99,235,0.35)] border border-blue-400/30 font-semibold'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5 font-medium'
                         }`}
                       >
                         <div className="flex items-center gap-3">

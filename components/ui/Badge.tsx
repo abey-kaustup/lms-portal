@@ -8,17 +8,17 @@ interface BadgeProps {
 
 export function Badge({ variant = 'default', children, className = '' }: BadgeProps) {
   const styles = {
-    default: 'bg-slate-100 text-slate-700 border-slate-200',
-    success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    warning: 'bg-amber-50 text-amber-700 border-amber-200',
-    danger: 'bg-red-50 text-red-700 border-red-200',
-    info: 'bg-blue-50 text-blue-700 border-blue-200',
-    purple: 'bg-purple-50 text-purple-700 border-purple-200',
+    default: 'bg-slate-100/80 text-slate-700 border-slate-200/80 backdrop-blur-md',
+    success: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 backdrop-blur-md',
+    warning: 'bg-amber-500/10 text-amber-700 border-amber-500/20 backdrop-blur-md',
+    danger: 'bg-red-500/10 text-red-700 border-red-500/20 backdrop-blur-md',
+    info: 'bg-blue-500/10 text-blue-700 border-blue-500/20 backdrop-blur-md',
+    purple: 'bg-purple-500/10 text-purple-700 border-purple-500/20 backdrop-blur-md',
   }[variant];
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles} ${className}`}
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border shadow-xs ${styles} ${className}`}
     >
       {children}
     </span>
@@ -37,22 +37,22 @@ interface StatCardProps {
 
 export function StatCard({ title, value, subtitle, icon: Icon, color = 'blue' }: StatCardProps) {
   const iconBg = {
-    blue: 'bg-blue-50 text-blue-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-    purple: 'bg-purple-50 text-purple-600',
-    slate: 'bg-slate-100 text-slate-700',
+    blue: 'bg-blue-500/10 text-blue-600 border border-blue-500/20',
+    emerald: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
+    amber: 'bg-amber-500/10 text-amber-600 border border-amber-500/20',
+    purple: 'bg-purple-500/10 text-purple-600 border border-purple-500/20',
+    slate: 'bg-slate-500/10 text-slate-700 border border-slate-500/20',
   }[color];
 
   return (
-    <div className="p-6 bg-white rounded-2xl shadow-xs border border-slate-200/80 transition-all hover:shadow-md">
+    <div className="apple-card p-6 border border-white/80 shadow-[0_4px_20px_-2px_rgba(15,23,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-lg">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</p>
-          <p className="text-2xl font-bold text-slate-900 mt-2">{value}</p>
-          {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{title}</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1.5 tracking-tight">{value}</p>
+          {subtitle && <p className="text-xs text-slate-500 mt-1 font-medium">{subtitle}</p>}
         </div>
-        <div className={`p-3.5 rounded-2xl ${iconBg}`}>
+        <div className={`p-3.5 rounded-2xl backdrop-blur-md ${iconBg}`}>
           <Icon className="w-6 h-6" />
         </div>
       </div>

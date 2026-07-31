@@ -226,18 +226,18 @@ export default function EmployeeCertificatePage() {
               </div>
 
               {/* Title */}
-              <h1 className="text-4xl font-bold text-[#0F172A] tracking-tight font-serif pt-2">
+              <h1 className="text-4xl font-bold text-[#0F172A] tracking-tight font-sans pt-2">
                 CERTIFICATE OF COMPLETION
               </h1>
 
-              <p className="text-sm text-slate-600 italic font-serif">
+              <p className="text-sm text-slate-600 font-sans">
                 This official credential is proudly awarded to
               </p>
             </div>
 
             {/* RECIPIENT NAME & EMPLOYEE METRICS */}
             <div className="space-y-4 py-2">
-              <h2 className="text-4xl font-extrabold text-[#0F172A] tracking-wide font-serif border-b-2 border-[#C9A227]/40 pb-3 max-w-xl mx-auto">
+              <h2 className="text-4xl font-extrabold text-[#0F172A] tracking-wide font-sans border-b-2 border-[#C9A227]/40 pb-3 max-w-xl mx-auto">
                 {fullName}
               </h2>
 
@@ -262,7 +262,7 @@ export default function EmployeeCertificatePage() {
                 For successfully fulfilling all mandatory requirements, adhering to organizational standards, and demonstrating proficiency in the corporate induction curriculum for:
               </p>
 
-              <h3 className="text-2xl font-bold text-[#0F172A] font-serif bg-slate-50 p-3 rounded-2xl border border-slate-200 shadow-soft-xs">
+              <h3 className="text-2xl font-bold text-[#0F172A] font-sans bg-slate-50 p-3 rounded-2xl border border-slate-200 shadow-soft-xs">
                 {certData.course.title || 'Employee Induction & Onboarding Program 2026'}
               </h3>
 
@@ -321,7 +321,7 @@ export default function EmployeeCertificatePage() {
                 {/* Signature Line */}
                 <div className="space-y-0.5 text-center pt-1">
                   <div className="w-36 border-b border-slate-900 mx-auto" />
-                  <p className="text-xs font-bold text-[#0F172A] font-serif pt-0.5">
+                  <p className="text-xs font-bold text-[#0F172A] font-sans pt-0.5">
                     Executive HR Operations
                   </p>
                   <p className="text-[10px] text-slate-500 font-medium">

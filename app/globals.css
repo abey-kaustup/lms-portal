@@ -1,10 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-poppins), 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-poppins: var(--font-poppins), 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 @layer base {
   :root {
-    --font-primary: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, Helvetica, sans-serif;
-    --font-mono: 'Roboto Mono', 'Geist Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --font-primary: var(--font-poppins), 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     --background: #F8FAFC;
     --foreground: #0F172A;
     --primary: #2563EB;
@@ -27,10 +31,12 @@ body {
   font-family: var(--font-primary);
   font-size: 15px;
   font-weight: 400;
+  line-height: 1.6;
   margin: 0;
   padding: 0;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 code, kbd, samp, pre, .font-mono {
@@ -43,18 +49,23 @@ code, kbd, samp, pre, .font-mono {
   font-weight: 700;
 }
 
+/* Page Titles: 32-36px, Bold (700) */
 h1, .text-h1 {
-  font-size: 32px;
-  line-height: 40px;
+  font-size: 34px;
+  line-height: 42px;
   font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
+/* Section Titles: 24-28px, SemiBold (600) */
 h2, .text-h2 {
-  font-size: 24px;
-  line-height: 32px;
-  font-weight: 700;
+  font-size: 26px;
+  line-height: 34px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
+/* Card Titles: 18-22px, SemiBold (600) */
 h3, .text-h3 {
   font-size: 20px;
   line-height: 28px;
@@ -67,15 +78,17 @@ h3, .text-h3 {
   font-weight: 500;
 }
 
+/* Body Text: 15-16px, Regular (400) */
 .text-body {
   font-size: 15px;
   line-height: 24px;
   font-weight: 400;
 }
 
-.text-secondary-text {
-  font-size: 14px;
-  line-height: 20px;
+/* Helper Text: 13-14px, Regular (400) */
+.text-secondary-text, .helper-text {
+  font-size: 13px;
+  line-height: 18px;
   font-weight: 400;
 }
 
@@ -85,24 +98,181 @@ h3, .text-h3 {
   font-weight: 400;
 }
 
-.btn-text {
+/* Buttons: 14-15px, Medium (500) */
+button, .btn-text {
   font-size: 14px;
   font-weight: 500;
 }
 
-.table-header {
+/* Form Labels: 14px, Medium (500) */
+label, .form-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Table Headers: 14-15px, SemiBold (600) */
+.table-header, th {
   font-size: 14px;
   font-weight: 600;
 }
 
-.table-body {
+.table-body, td {
   font-size: 14px;
   font-weight: 400;
 }
 
-.sidebar-menu {
-  font-size: 14px;
+/* Navigation: 15px, Medium (500) */
+.sidebar-menu, nav a {
+  font-size: 15px;
   font-weight: 500;
+}
+
+/* ==========================================================================
+   Apple-Inspired VisionOS & macOS Glassmorphism & Glossy Design System
+   ========================================================================== */
+
+/* Apple Light Glass Container */
+.apple-glass {
+  background: rgba(255, 255, 255, 0.78) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Apple Dark Glass Container */
+.apple-glass-dark {
+  background: rgba(15, 23, 42, 0.84) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Apple Card Elevated Glass */
+.apple-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 1);
+}
+
+/* Apple Glossy Button Top Highlight */
+.apple-btn-glossy {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.25), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-btn-glossy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+.apple-btn-glossy:active {
+  transform: scale(0.98);
+}
+
+/* Apple Input Glass */
+.apple-input {
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(203, 213, 225, 0.8) !important;
+  box-shadow: inset 0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
+  border-radius: 12px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.apple-input:focus {
+  background: #ffffff !important;
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.02) !important;
+}
+
+/* ==========================================================================
+   Apple-Inspired Global Dropdown Slide & Fade Animation System
+   ========================================================================== */
+
+@keyframes appleDropdownSlideInRight {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes appleDropdownSlideInLeft {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes appleDropdownSlideInCenter {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.apple-dropdown-anim {
+  animation: appleDropdownSlideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.apple-dropdown-anim-left {
+  animation: appleDropdownSlideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top left;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.apple-dropdown-anim-center {
+  animation: appleDropdownSlideInCenter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Accessibility: Respect prefers-reduced-motion setting */
+@media (prefers-reduced-motion: reduce) {
+  .apple-dropdown-anim,
+  .apple-dropdown-anim-left,
+  .apple-dropdown-anim-center {
+    animation: none !important;
+    transition: opacity 0.1s linear !important;
+  }
 }
 
 /* Custom Enterprise Scrollbars */

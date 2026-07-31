@@ -37,15 +37,15 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }: Mod
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md transition-all">
       <div
-        className={`w-full ${maxWidthClass} bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-150`}
+        className={`w-full ${maxWidthClass} apple-glass rounded-3xl shadow-[0_24px_64px_0_rgba(15,23,42,0.25)] border border-white/80 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/60 bg-white/40">
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">{title}</h3>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-500 transition-colors"
+            className="p-1.5 rounded-full hover:bg-slate-200/60 text-slate-500 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

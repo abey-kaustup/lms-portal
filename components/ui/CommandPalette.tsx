@@ -93,9 +93,9 @@ export function CommandPalette({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-slate-950/60 backdrop-blur-md transition-all">
       <div
-        className="w-full max-w-xl bg-white rounded-3xl border border-slate-200 shadow-soft-xl overflow-hidden space-y-0 text-xs"
+        className="w-full max-w-xl apple-glass rounded-3xl border border-white/80 shadow-[0_24px_64px_0_rgba(15,23,42,0.25)] overflow-hidden space-y-0 text-xs apple-dropdown-anim-center"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Bar Input */}

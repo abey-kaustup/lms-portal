@@ -20,12 +20,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  const redirectWithNoCache = (url: URL) => {
+    const res = NextResponse.redirect(url);
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.headers.set('Pragma', 'no-cache');
+    res.headers.set('Expires', '0');
+    return res;
+  };
+
   // Protected HR Routes
   if (pathname.startsWith('/hr')) {
     if (!session || session.role !== 'HR_ADMIN') {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('from', pathname);
-      return NextResponse.redirect(loginUrl);
+      return redirectWithNoCache(loginUrl);
     }
   }
 
@@ -34,22 +42,29 @@ export async function middleware(request: NextRequest) {
     if (!session || session.role !== 'EMPLOYEE') {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('from', pathname);
-      return NextResponse.redirect(loginUrl);
+      return redirectWithNoCache(loginUrl);
     }
   }
 
   // Redirect root / to login or dashboard
   if (pathname === '/') {
     if (session?.role === 'HR_ADMIN') {
-      return NextResponse.redirect(new URL('/hr/dashboard', request.url));
+      return redirectWithNoCache(new URL('/hr/dashboard', request.url));
     }
     if (session?.role === 'EMPLOYEE') {
-      return NextResponse.redirect(new URL('/employee/dashboard', request.url));
+      return redirectWithNoCache(new URL('/employee/dashboard', request.url));
     }
-    return NextResponse.redirect(new URL('/login', request.url));
+    return redirectWithNoCache(new URL('/login', request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  if (pathname.startsWith('/hr') || pathname.startsWith('/employee')) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+  }
+
+  return response;
 }
 
 export const config = {

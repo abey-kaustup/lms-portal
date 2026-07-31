@@ -23,21 +23,21 @@ export function Button({
   ...props
 }: ButtonProps) {
   const alignStyle = className.includes('justify-') ? '' : 'justify-center';
-  const baseStyles = `inline-flex items-center ${alignStyle} font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none text-sm`;
+  const baseStyles = `inline-flex items-center ${alignStyle} font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none text-sm active:scale-[0.98]`;
 
   const sizeStyles = {
-    sm: 'px-3 py-1.5 rounded-xl gap-1.5 h-8 text-[13px]',
+    sm: 'px-3.5 py-1.5 rounded-xl gap-1.5 h-8 text-[13px]',
     md: 'px-4 py-2 rounded-xl gap-2 h-10 text-sm',
-    lg: 'px-5 py-2.5 rounded-2xl gap-2.5 h-12 text-sm',
+    lg: 'px-5 py-2.5 rounded-2xl gap-2.5 h-12 text-sm font-semibold',
   }[size];
 
   const variantStyles = {
-    primary: 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-soft-xs focus:ring-blue-500/30 font-medium',
-    secondary: 'bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white shadow-soft-xs focus:ring-slate-900/30 font-medium',
-    outline: 'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-200/90 shadow-soft-xs focus:ring-slate-400/20 font-medium',
-    ghost: 'bg-transparent hover:bg-slate-100/80 active:bg-slate-200/80 text-slate-700 focus:ring-slate-400/20 font-medium',
-    danger: 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-soft-xs focus:ring-red-500/30 font-medium',
-    success: 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-soft-xs focus:ring-emerald-500/30 font-medium',
+    primary: 'bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-[0_4px_14px_0_rgba(37,99,235,0.28)] border border-blue-400/30 focus:ring-blue-500/30',
+    secondary: 'bg-gradient-to-b from-slate-800 to-slate-900 hover:from-slate-900 hover:to-slate-950 text-white shadow-[0_4px_14px_0_rgba(15,23,42,0.25)] border border-slate-700/40 focus:ring-slate-900/30',
+    outline: 'bg-white/80 backdrop-blur-md hover:bg-white text-slate-700 border border-slate-200/90 shadow-[0_2px_8px_0_rgba(15,23,42,0.04)] focus:ring-slate-400/20',
+    ghost: 'bg-transparent hover:bg-slate-200/50 active:bg-slate-200/80 text-slate-700 focus:ring-slate-400/20',
+    danger: 'bg-gradient-to-b from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-[0_4px_14px_0_rgba(239,68,68,0.28)] border border-red-400/30 focus:ring-red-500/30',
+    success: 'bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-[0_4px_14px_0_rgba(16,185,129,0.28)] border border-emerald-400/30 focus:ring-emerald-500/30',
   }[variant];
 
   const widthStyle = fullWidth ? 'w-full' : '';

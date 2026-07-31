@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { logoutClient } from '@/lib/auth-client';
 import {
   Search,
   Bell,
@@ -70,7 +71,7 @@ export function HRHeader({
     setActiveMenu(null);
   }, [pathname]);
 
-  // Handle outside click and Escape key listeners for all dropdowns
+  // Handle outside click, Escape key, and scroll listeners for all dropdowns
   useEffect(() => {
     if (!activeMenu) return;
 
@@ -86,12 +87,18 @@ export function HRHeader({
       }
     };
 
+    const handleScroll = () => {
+      setActiveMenu(null);
+    };
+
     document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
 
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('scroll', handleScroll, { capture: true });
     };
   }, [activeMenu]);
 
@@ -105,10 +112,7 @@ export function HRHeader({
 
   const handleLogout = async () => {
     closeAllMenus();
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (e) {}
-    window.location.href = '/login';
+    await logoutClient();
   };
 
   // Determine active display properties using live fetched user as primary source of truth
@@ -148,13 +152,13 @@ export function HRHeader({
     <>
       <header
         ref={headerRef}
-        className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3 flex items-center justify-between gap-4"
+        className="relative z-40 w-full bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex items-center justify-between gap-4 shadow-xs"
       >
         {/* Left: Mobile Toggle & Global Command Search Launcher */}
         <div className="flex items-center gap-3 flex-1 max-w-xl">
           <button
             onClick={onToggleMobileSidebar}
-            className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl md:hidden"
+            className="p-2 text-slate-600 hover:bg-slate-200/50 rounded-xl md:hidden"
             aria-label="Toggle Navigation"
           >
             <Menu className="w-5 h-5" />
@@ -165,7 +169,7 @@ export function HRHeader({
               closeAllMenus();
               setCommandOpen(true);
             }}
-            className="w-full flex items-center justify-between px-3.5 py-2 bg-slate-100/80 hover:bg-slate-100 text-slate-500 rounded-xl text-xs font-medium border border-slate-200/60 transition-all group"
+            className="w-full flex items-center justify-between px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-xl text-xs font-medium border border-slate-200 transition-all group shadow-xs"
           >
             <div className="flex items-center gap-2">
               <Search className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
@@ -176,7 +180,7 @@ export function HRHeader({
               </span>
             </div>
 
-            <div className="hidden sm:flex items-center gap-1 text-[10px] text-slate-400 bg-white px-2 py-0.5 rounded-lg border border-slate-200/80 font-mono shadow-soft-xs">
+            <div className="hidden sm:flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200/80 font-mono">
               <Command className="w-3 h-3" />
               <span>K</span>
             </div>
@@ -207,7 +211,7 @@ export function HRHeader({
             </button>
 
             {activeMenu === 'system' && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-3xl border border-slate-200 shadow-soft-xl p-4 space-y-3 z-50 text-xs animate-in fade-in duration-150">
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 space-y-3 z-50 text-xs apple-dropdown-anim">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -298,7 +302,7 @@ export function HRHeader({
               className={`p-2.5 rounded-xl transition-colors relative ${
                 activeMenu === 'notifications'
                   ? 'bg-slate-200 text-slate-900'
-                  : 'bg-slate-100/80 hover:bg-slate-100 text-slate-600'
+                  : 'bg-slate-100 hover:bg-slate-200/70 text-slate-600'
               }`}
               title="Notifications"
             >
@@ -307,7 +311,7 @@ export function HRHeader({
             </button>
 
             {activeMenu === 'notifications' && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-3xl border border-slate-200 shadow-soft-xl p-4 space-y-3 z-50 text-xs animate-in fade-in duration-150">
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-3xl border border-slate-200 shadow-2xl p-4 space-y-3 z-50 text-xs apple-dropdown-anim">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <h4 className="font-bold text-slate-900">System Notifications</h4>
                   <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
@@ -315,11 +319,11 @@ export function HRHeader({
                   </span>
                 </div>
                 <div className="space-y-2">
-                  <div className="p-2.5 bg-blue-50/50 rounded-2xl border border-blue-100/60">
+                  <div className="p-2.5 bg-blue-50 rounded-2xl border border-blue-100">
                     <p className="font-bold text-slate-900">Active Induction Session</p>
                     <p className="text-[11px] text-slate-500 mt-0.5">Welcome to your corporate onboarding workspace.</p>
                   </div>
-                  <div className="p-2.5 bg-emerald-50/50 rounded-2xl border border-emerald-100/60">
+                  <div className="p-2.5 bg-emerald-50 rounded-2xl border border-emerald-100">
                     <p className="font-bold text-slate-900">Compliance Benchmark Met</p>
                     <p className="text-[11px] text-slate-500 mt-0.5">Induction progress synced with HRMS.</p>
                   </div>
@@ -359,7 +363,7 @@ export function HRHeader({
             </button>
 
             {activeMenu === 'user' && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-soft-xl p-2 z-50 text-xs animate-in fade-in duration-150 space-y-1">
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2 z-50 text-xs apple-dropdown-anim space-y-1">
                 <div className="px-3 py-2.5 border-b border-slate-100">
                   <p className="font-bold text-slate-900 text-sm truncate">{nameToDisplay}</p>
                   <p className="text-[11px] text-slate-600 font-medium truncate mt-0.5">{subtitleToDisplay}</p>

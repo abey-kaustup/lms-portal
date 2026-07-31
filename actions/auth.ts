@@ -45,6 +45,7 @@ export async function loginHR(prevState: any, formData: FormData) {
     },
   });
 
+  revalidatePath('/', 'layout');
   return { success: true, redirectUrl: '/hr/dashboard' };
 }
 
@@ -94,6 +95,7 @@ export async function loginEmployee(prevState: any, formData: FormData) {
     },
   });
 
+  revalidatePath('/', 'layout');
   return { success: true, redirectUrl: '/employee/dashboard' };
 }
 
@@ -160,46 +162,26 @@ export async function getCurrentUser() {
     }
   }
 
-  // Fallback for active development/testing session: return EMP7777 Kaustubh Bhatlawande from database
-  const masterEmp = await prisma.employee.findUnique({
-    where: { employeeId: 'EMP7777' },
-  });
-
-  if (masterEmp) {
-    const name = `${masterEmp.firstName} ${masterEmp.middleName ? masterEmp.middleName + ' ' : ''}${masterEmp.lastName}`.trim();
-    return {
-      id: masterEmp.id,
-      employeeId: masterEmp.employeeId,
-      name,
-      firstName: masterEmp.firstName,
-      lastName: masterEmp.lastName,
-      email: masterEmp.email,
-      department: masterEmp.department,
-      designation: masterEmp.designation,
-      office: masterEmp.office,
-      role: 'EMPLOYEE' as const,
-      isMasterTester: masterEmp.isMasterTester,
-      initials: 'KB',
-      subtitle: `${masterEmp.employeeId} • ${masterEmp.department} • ${masterEmp.designation}`,
-    };
-  }
-
   return null;
 }
 
 export async function logoutUser() {
-  const session = await getSession();
-  if (session) {
-    await prisma.activityLog.create({
-      data: {
-        userId: session.identifier,
-        role: session.role,
-        action: 'LOGOUT',
-        details: `User ${session.name} logged out`,
-      },
-    });
+  try {
+    const session = await getSession();
+    if (session) {
+      await prisma.activityLog.create({
+        data: {
+          userId: session.identifier,
+          role: session.role,
+          action: 'LOGOUT',
+          details: `User ${session.name} logged out`,
+        },
+      });
+    }
+  } catch (err) {
+    console.error('Logout activity logging error:', err);
+  } finally {
+    await clearSessionCookie();
+    revalidatePath('/');
   }
-
-  await clearSessionCookie();
-  revalidatePath('/');
 }

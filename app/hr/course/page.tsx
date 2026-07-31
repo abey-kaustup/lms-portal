@@ -673,36 +673,38 @@ export default function HRCoursePage() {
               className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-semibold"
             >
               <option value="VIDEO">Video Only</option>
-              <option value="PDF">PDF Document Only</option>
-              <option value="VIDEO_PDF">Video + PDF Document</option>
+              <option value="PDF">Document / Reading Material (PDF, PPT, Word, Excel, Image)</option>
+              <option value="VIDEO_PDF">Video + Document / Attachment</option>
             </select>
           </div>
 
           {(contentType === 'VIDEO' || contentType === 'VIDEO_PDF') && (
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">SharePoint Video URL / Stream Embed Link</label>
+              <label className="text-xs font-bold text-slate-700">Video URL / Google Drive / YouTube / SharePoint Link</label>
               <input
                 type="url"
                 required
-                placeholder="https://corporate.sharepoint.com/:v:/s/learning/video.mp4"
+                placeholder="https://docs.google.com/videos/d/... or YouTube / SharePoint URL"
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
                 className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-mono"
               />
+              <p className="text-[11px] text-slate-500 font-medium">Supports Google Drive, Google Docs, YouTube, Vimeo, Loom, SharePoint, and MP4 direct video URLs.</p>
             </div>
           )}
 
           {(contentType === 'PDF' || contentType === 'VIDEO_PDF') && (
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">SharePoint PDF URL / Document Embed Link</label>
+              <label className="text-xs font-bold text-slate-700">Document & Attachment URL (PDF, PPT, Word, Excel, Image, SharePoint, Google Docs)</label>
               <input
                 type="url"
                 required
-                placeholder="https://corporate.sharepoint.com/:b:/s/learning/handbook.pdf"
+                placeholder="https://.../document.pdf or presentation.pptx, file.docx, sheet.xlsx, image.jpg"
                 value={pdfUrl}
                 onChange={(e) => setPdfUrl(e.target.value)}
                 className="w-full px-3 py-2 text-xs text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-mono"
               />
+              <p className="text-[11px] text-slate-500 font-medium">Supports PDF, PowerPoint (.pptx/.ppt), Word (.docx/.doc), Excel (.xlsx/.xls/.csv), Images (.jpg/.png/.webp), and Google Docs/Slides/Sheets.</p>
             </div>
           )}
 

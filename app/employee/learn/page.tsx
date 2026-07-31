@@ -232,7 +232,7 @@ function LearnWorkspaceContent() {
               <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                 <span className="flex items-center gap-1.5">
                   <FileText className="w-4 h-4 text-blue-600" />
-                  Lesson Reading Material (SharePoint PDF)
+                  Lesson Reading Material & Attachment (PDF, PPT, Word, Excel, Image)
                 </span>
               </div>
               <PDFViewer

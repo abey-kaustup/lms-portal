@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { UserSession } from '@/types';
-import { logoutUser } from '@/actions/auth';
+import { logoutClient } from '@/lib/auth-client';
 import { GraduationCap, LogOut, User, ShieldCheck, Building2 } from 'lucide-react';
 
 interface NavbarProps {
@@ -11,7 +11,7 @@ interface NavbarProps {
 
 export function Navbar({ session }: NavbarProps) {
   const handleLogout = async () => {
-    await logoutUser();
+    await logoutClient();
   };
 
   return (

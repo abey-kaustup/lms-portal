@@ -1,7 +1,17 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, ShieldCheck, AlertCircle, CheckCircle, Maximize, Minimize } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  ShieldCheck,
+  AlertCircle,
+  CheckCircle,
+  Maximize,
+  Minimize,
+  ExternalLink,
+} from 'lucide-react';
 
 interface AntiSkipVideoPlayerProps {
   videoUrl: string;
@@ -12,13 +22,85 @@ interface AntiSkipVideoPlayerProps {
   isCompleted?: boolean;
 }
 
-function getYouTubeEmbedUrl(url: string): string | null {
+export interface VideoEmbedInfo {
+  embedUrl: string;
+  type: 'gdrive' | 'youtube' | 'vimeo' | 'loom' | 'generic';
+  label: string;
+}
+
+export function getEmbedInfo(url: string): VideoEmbedInfo | null {
   if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  if (match && match[2] && match[2].length === 11) {
-    return `https://www.youtube.com/embed/${match[2]}?autoplay=1&rel=0`;
+  const cleanUrl = url.trim();
+
+  // 1. YouTube
+  const ytMatch = cleanUrl.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/);
+  if (ytMatch && ytMatch[2] && ytMatch[2].length === 11) {
+    return {
+      embedUrl: `https://www.youtube.com/embed/${ytMatch[2]}?autoplay=1&rel=0`,
+      type: 'youtube',
+      label: 'YouTube Video Player',
+    };
   }
+
+  // 2. Google Drive / Google Docs Videos
+  if (cleanUrl.includes('drive.google.com') || cleanUrl.includes('docs.google.com')) {
+    const dMatch = cleanUrl.match(/\/(?:d|file\/d|videos\/d)\/([a-zA-Z0-9_-]+)/);
+    if (dMatch && dMatch[1]) {
+      const fileId = dMatch[1];
+      const isDocs = cleanUrl.includes('docs.google.com');
+      // Maintain exact domain origin matching (docs.google.com vs drive.google.com)
+      const embedUrl = isDocs
+        ? (cleanUrl.includes('/videos/')
+            ? `https://docs.google.com/videos/d/${fileId}/play`
+            : `https://docs.google.com/file/d/${fileId}/preview`)
+        : `https://drive.google.com/file/d/${fileId}/preview`;
+
+      return {
+        embedUrl,
+        type: 'gdrive',
+        label: 'Google Drive / Docs Video Player',
+      };
+    }
+    const idMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch && idMatch[1]) {
+      return {
+        embedUrl: `https://drive.google.com/file/d/${idMatch[1]}/preview`,
+        type: 'gdrive',
+        label: 'Google Drive Video Player',
+      };
+    }
+  }
+
+  // 3. Vimeo
+  const vimeoMatch = cleanUrl.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)([0-9]+)/);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return {
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+      type: 'vimeo',
+      label: 'Vimeo Video Player',
+    };
+  }
+
+  // 4. Loom
+  const loomMatch = cleanUrl.match(/(?:loom\.com\/share\/|loom\.com\/embed\/)([a-zA-Z0-9_-]+)/);
+  if (loomMatch && loomMatch[1]) {
+    return {
+      embedUrl: `https://www.loom.com/embed/${loomMatch[1]}`,
+      type: 'loom',
+      label: 'Loom Video Player',
+    };
+  }
+
+  // 5. SharePoint / OneDrive / Preview pages that are not direct video extensions
+  const isDirectVideoFile = /\.(mp4|webm|ogg|m3u8|mpd)(\?.*)?$/i.test(cleanUrl);
+  if (!isDirectVideoFile && (cleanUrl.includes('/embed') || cleanUrl.includes('/preview') || cleanUrl.includes('sharepoint.com') || cleanUrl.includes('1drv.ms') || cleanUrl.includes('onedrive'))) {
+    return {
+      embedUrl: cleanUrl,
+      type: 'generic',
+      label: 'Cloud Embedded Video Player',
+    };
+  }
+
   return null;
 }
 
@@ -38,8 +120,13 @@ export function AntiSkipVideoPlayer({
   const [maxWatchedTime, setMaxWatchedTime] = useState(initialWatchedSeconds);
   const [completed, setCompleted] = useState(isCompleted);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
-  const youtubeEmbedUrl = getYouTubeEmbedUrl(videoUrl);
+  useEffect(() => {
+    setVideoError(false);
+  }, [videoUrl]);
+
+  const embedInfo = getEmbedInfo(videoUrl);
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
@@ -88,20 +175,16 @@ export function AntiSkipVideoPlayer({
     const cur = videoRef.current.currentTime;
     setCurrentTime(cur);
 
-    // Anti-skip check: If user seeks forward beyond max watched time + 1.5s buffer
     if (!completed && cur > maxWatchedTime + 1.5) {
-      // Force rewind back to max watched position!
       videoRef.current.currentTime = maxWatchedTime;
       setCurrentTime(maxWatchedTime);
       return;
     }
 
-    // Update max watched time if progressing normally
     if (cur > maxWatchedTime) {
       setMaxWatchedTime(cur);
     }
 
-    // Check completion (95% watched or duration met)
     if (!completed && duration > 0) {
       const watchedPercent = maxWatchedTime / duration;
       if (watchedPercent >= 0.95 || (minDurationSeconds > 0 && maxWatchedTime >= minDurationSeconds)) {
@@ -113,7 +196,7 @@ export function AntiSkipVideoPlayer({
 
   // Heartbeat every 10s to report progress to server
   useEffect(() => {
-    if (youtubeEmbedUrl) return; // Skip HTML5 video heartbeat if YouTube iframe
+    if (embedInfo || videoError) return;
     const interval = setInterval(() => {
       if (duration > 0) {
         const isFullyWatched = completed || maxWatchedTime / duration >= 0.95;
@@ -122,7 +205,7 @@ export function AntiSkipVideoPlayer({
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [maxWatchedTime, duration, completed, onProgressUpdate, youtubeEmbedUrl]);
+  }, [maxWatchedTime, duration, completed, onProgressUpdate, embedInfo, videoError]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -149,14 +232,23 @@ export function AntiSkipVideoPlayer({
 
   const watchedPercentage = duration > 0 ? Math.min(100, Math.round((maxWatchedTime / duration) * 100)) : 0;
 
-  // Render YouTube Iframe Player if YouTube URL
-  if (youtubeEmbedUrl) {
+  // Active Embed URL (Parsed Embed URL or Fallback preview for web links)
+  const activeEmbedUrl =
+    embedInfo?.embedUrl ||
+    (videoError
+      ? videoUrl.includes('docs.google.com') || videoUrl.includes('drive.google.com')
+        ? videoUrl
+        : videoUrl
+      : null);
+
+  // Render Iframe Embed Player for Google Drive, YouTube, Vimeo, Loom, SharePoint, or Video Error fallback
+  if (activeEmbedUrl) {
     return (
       <div ref={containerRef} className="w-full bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-800">
         <div className="relative aspect-video bg-black flex items-center justify-center">
           <iframe
-            src={youtubeEmbedUrl}
-            title="Lesson YouTube Video Player"
+            src={activeEmbedUrl}
+            title={embedInfo?.label || 'Lesson Video Player'}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             className="w-full h-full border-0"
@@ -164,7 +256,7 @@ export function AntiSkipVideoPlayer({
 
           <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-slate-200 border border-slate-700">
             <ShieldCheck className="w-4 h-4 text-blue-400" />
-            <span>Interactive Video Lesson</span>
+            <span>{embedInfo?.label || 'Interactive Video Lesson'}</span>
           </div>
 
           {completed && (
@@ -175,19 +267,29 @@ export function AntiSkipVideoPlayer({
           )}
         </div>
 
-        <div className="p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-slate-400">
-            Watch the video and click completed when you finish.
-          </p>
+        <div className="p-4 bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-800">
+          <div className="flex items-center gap-2 text-xs text-slate-300">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>If video does not embed due to domain security policy:</span>
+          </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center gap-1.5 text-xs font-bold shadow-xs shrink-0"
+              title="Open video in Google Drive / Cloud"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Open in Google Drive</span>
+            </a>
             <button
               onClick={toggleFullscreen}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1.5 text-xs font-medium"
-              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1 text-xs font-medium"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
-              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-              <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+              {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={() => {
@@ -195,9 +297,9 @@ export function AntiSkipVideoPlayer({
                 onComplete();
                 onProgressUpdate(100, 100, true);
               }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0"
             >
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className="w-3.5 h-3.5" />
               <span>{completed ? 'Lesson Completed' : 'Mark as Completed'}</span>
             </button>
           </div>
@@ -209,13 +311,16 @@ export function AntiSkipVideoPlayer({
   // Native HTML5 Video Player
   return (
     <div ref={containerRef} className="w-full bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-800">
-      {/* SharePoint / Video Player Container */}
       <div className="relative aspect-video bg-black flex items-center justify-center">
         <video
           ref={videoRef}
           src={videoUrl}
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={handleTimeUpdate}
+          onError={() => {
+            console.warn('Native HTML5 video error, switching to embed player:', videoUrl);
+            setVideoError(true);
+          }}
           onEnded={() => {
             setIsPlaying(false);
             if (watchedPercentage >= 95) {
@@ -227,13 +332,11 @@ export function AntiSkipVideoPlayer({
           onClick={togglePlay}
         />
 
-        {/* Anti-skip indicator overlay badge */}
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-slate-200 border border-slate-700">
           <ShieldCheck className="w-4 h-4 text-blue-400" />
           <span>Anti-Skip Protected</span>
         </div>
 
-        {/* Completion badge */}
         {completed && (
           <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-emerald-950/80 text-emerald-300 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold border border-emerald-800">
             <CheckCircle className="w-4 h-4 text-emerald-400" />
@@ -242,16 +345,12 @@ export function AntiSkipVideoPlayer({
         )}
       </div>
 
-      {/* Control Bar & Progress */}
       <div className="p-4 bg-slate-900 text-white flex flex-col gap-3">
-        {/* Custom Progress Bar showing max watched range */}
         <div className="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-          {/* Max watched range */}
           <div
             className="absolute top-0 left-0 h-full bg-blue-500/40"
             style={{ width: `${duration > 0 ? (maxWatchedTime / duration) * 100 : 0}%` }}
           />
-          {/* Current position */}
           <div
             className="absolute top-0 left-0 h-full bg-blue-600 rounded-full transition-all duration-150"
             style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
@@ -289,7 +388,7 @@ export function AntiSkipVideoPlayer({
             <button
               onClick={toggleFullscreen}
               className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors flex items-center gap-1 text-xs"
-              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
             </button>

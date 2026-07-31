@@ -16,12 +16,12 @@ export function Card({ children, className = '', hoverable = false, padding = 'm
   }[padding];
 
   const hoverStyles = hoverable
-    ? 'transition-all duration-200 hover:shadow-soft-md hover:-translate-y-0.5'
+    ? 'hover:-translate-y-1 hover:shadow-[0_12px_32px_-4px_rgba(15,23,42,0.1)]'
     : '';
 
   return (
     <div
-      className={`bg-white rounded-3xl border border-slate-200/80 shadow-soft-xs ${paddingStyles} ${hoverStyles} ${className}`}
+      className={`apple-card ${paddingStyles} ${hoverStyles} ${className}`}
     >
       {children}
     </div>

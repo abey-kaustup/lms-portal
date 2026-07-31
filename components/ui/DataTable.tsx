@@ -58,7 +58,7 @@ export function DataTable<T>({
     <div className="space-y-4">
       {/* Top Filter & Bulk Actions Bar */}
       {(searchable || filterControls || bulkActions) && (
-        <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-soft-xs flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="p-4 apple-glass rounded-2xl border border-white/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
           {searchable && onSearchChange && (
             <div className="relative w-full md:w-80">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -67,7 +67,7 @@ export function DataTable<T>({
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-sm font-normal text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="apple-input w-full pl-10 pr-4 py-2 text-sm font-normal text-slate-900 focus:outline-none"
               />
             </div>
           )}
@@ -80,7 +80,7 @@ export function DataTable<T>({
       )}
 
       {/* Main Table Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-soft-xs overflow-hidden">
+      <div className="apple-card overflow-hidden">
         <div className="overflow-x-auto max-h-[650px] overflow-y-auto">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-slate-900 text-white text-sm font-semibold tracking-wide shadow-xs">
