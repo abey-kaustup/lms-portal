@@ -62,17 +62,17 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
 
   return (
     <>
-      {/* Mobile Backdrop Overlay */}
+      {/* Mobile & Tablet Backdrop Overlay */}
       {mobileOpen && (
         <div
           onClick={onCloseMobile}
-          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-xs md:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-xs lg:hidden"
         />
       )}
 
       <aside
-        className={`fixed md:sticky top-0 left-0 z-50 h-screen w-[260px] apple-glass-dark text-slate-300 flex flex-col justify-between shrink-0 transition-transform duration-300 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[260px] apple-glass-dark text-slate-300 flex flex-col justify-between shrink-0 transition-transform duration-300 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Top Logo & App Brand Header */}

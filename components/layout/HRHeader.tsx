@@ -158,7 +158,7 @@ export function HRHeader({
         <div className="flex items-center gap-3 flex-1 max-w-xl">
           <button
             onClick={onToggleMobileSidebar}
-            className="p-2 text-slate-600 hover:bg-slate-200/50 rounded-xl md:hidden"
+            className="p-2 text-slate-600 hover:bg-slate-200/50 rounded-xl lg:hidden"
             aria-label="Toggle Navigation"
           >
             <Menu className="w-5 h-5" />
