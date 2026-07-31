@@ -1,5 +1,7 @@
 'use client';
 
+import { safeClearLocalStorage, safeClearSessionStorage } from '@/lib/safe-storage';
+
 let isLoggingOut = false;
 
 /**
@@ -12,15 +14,9 @@ export async function logoutClient(): Promise<void> {
   isLoggingOut = true;
 
   try {
-    // Clear client-side storage immediately
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (storageErr) {
-        console.error('Failed to clear local/session storage:', storageErr);
-      }
-    }
+    // Clear client-side storage safely without throwing SecurityError
+    safeClearLocalStorage();
+    safeClearSessionStorage();
 
     // Call server-side logout API endpoint
     await fetch('/api/auth/logout', {
