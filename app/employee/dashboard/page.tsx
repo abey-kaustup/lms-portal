@@ -96,14 +96,22 @@ export default async function EmployeeDashboardPage() {
           subtitle={`${completedLessonsCount} of ${totalLessonsCount} Lessons Completed`}
           icon={BookOpen}
           color="blue"
+          progress={overallProgressPercentage}
+          badgeText="COMPLIANCE"
+          actionHref="/employee/learn"
+          actionText="Continue Induction"
         />
 
         <StatCard
           title="Common Modules"
           value={`${commonCompletedCount}/${commonLessonsCount}`}
-          subtitle={allCommonCompleted ? '✔ Common Completed' : 'Mandatory Core Modules'}
+          subtitle={allCommonCompleted ? '✔ All Core Modules Completed' : `${Math.max(0, commonLessonsCount - commonCompletedCount)} Core Module(s) Remaining`}
           icon={CheckCircle2}
           color={allCommonCompleted ? 'emerald' : 'blue'}
+          progress={commonLessonsCount > 0 ? (commonCompletedCount / commonLessonsCount) * 100 : 0}
+          badgeText={allCommonCompleted ? 'PASSED' : 'MANDATORY'}
+          actionHref="/employee/learn"
+          actionText="View Core Modules"
         />
 
         <StatCard
@@ -117,21 +125,27 @@ export default async function EmployeeDashboardPage() {
           }
           subtitle={
             passedAttempt
-              ? `Score: ${passedAttempt.score}%`
+              ? `Score: ${passedAttempt.score}% • Passed`
               : allLessonsCompleted
-              ? 'Ready for assessment'
+              ? 'Ready to take assessment test'
               : 'Complete lessons to unlock'
           }
           icon={FileCheck2}
           color={isCourseFullyCompleted ? 'emerald' : isAssessmentUnlocked ? 'amber' : 'slate'}
+          badgeText={isCourseFullyCompleted ? 'VERIFIED' : isAssessmentUnlocked ? 'READY' : 'LOCKED'}
+          actionHref={isAssessmentUnlocked ? '/employee/assessment' : undefined}
+          actionText={isAssessmentUnlocked ? 'Take Assessment Test' : undefined}
         />
 
         <StatCard
           title="Certificate Status"
           value={certificate ? 'Issued' : 'Pending'}
-          subtitle={certificate ? certificate.certificateNumber : 'Unlocked upon passing'}
+          subtitle={certificate ? `Ref: ${certificate.certificateNumber}` : 'Unlocked upon passing test'}
           icon={Award}
           color={certificate ? 'purple' : 'slate'}
+          badgeText={certificate ? 'VERIFIED PDF' : 'LOCKED'}
+          actionHref={certificate ? '/employee/certificate' : undefined}
+          actionText={certificate ? 'Download Certificate' : undefined}
         />
       </div>
 
