@@ -28,7 +28,7 @@ function LoginFormContent() {
     try {
       const res = await loginEmployee(null, formData);
       if (res.success && res.redirectUrl) {
-        window.location.href = redirectFrom || res.redirectUrl;
+        window.location.replace(redirectFrom || res.redirectUrl);
       } else {
         setError(res.error || 'Login failed.');
         setLoading(false);
@@ -55,7 +55,7 @@ function LoginFormContent() {
     try {
       const res = await loginHR(null, formData);
       if (res.success && res.redirectUrl) {
-        window.location.href = redirectFrom || res.redirectUrl;
+        window.location.replace(redirectFrom || res.redirectUrl);
       } else {
         setError(res.error || 'Login failed.');
         setLoading(false);
