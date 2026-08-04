@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutClient } from '@/lib/auth-client';
@@ -55,10 +55,13 @@ const MENU_GROUPS: SidebarGroup[] = [
 
 export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean; onCloseMobile?: () => void }) {
   const pathname = usePathname();
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleLogout = async () => {
     await logoutClient();
   };
+
+  const isExpanded = isHovered || mobileOpen;
 
   return (
     <>
@@ -66,46 +69,49 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
       {mobileOpen && (
         <div
           onClick={onCloseMobile}
-          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-xs lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs lg:hidden"
         />
       )}
 
+      {/* Desktop Spacer Box to reserve 72px width in layout flow */}
+      <div className="hidden lg:block w-[72px] shrink-0 h-screen" />
+
+      {/* Main Hover-Expandable Sidebar Container */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[260px] apple-glass-dark text-slate-300 flex flex-col justify-between shrink-0 transition-transform duration-300 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`fixed top-0 left-0 z-50 h-screen apple-glass-dark text-slate-300 flex flex-col justify-between shrink-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          mobileOpen
+            ? 'translate-x-0 w-[300px] shadow-2xl'
+            : '-translate-x-full lg:translate-x-0'
+        } ${
+          !mobileOpen && isHovered
+            ? 'w-[300px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-r border-slate-700/60'
+            : !mobileOpen
+            ? 'lg:w-[72px] border-r border-slate-800/80'
+            : ''
         }`}
       >
         {/* Top Logo & App Brand Header */}
-        <div className="p-5 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-b from-blue-500 to-blue-600 rounded-2xl text-white shadow-[0_4px_14px_0_rgba(37,99,235,0.35)] border border-blue-400/30">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-white tracking-tight leading-tight">Corporate LMS</h1>
-              <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">HR Admin Console</p>
+        <div className="p-3.5 space-y-4 overflow-hidden">
+          {/* Brand Header: Logo + SCIPL Elevate Title */}
+          <div className="flex items-center gap-3 px-1 py-1">
+            <img src="/logo.png" alt="SCIPL Elevate" className="h-9 w-auto object-contain shrink-0" />
+            <div className={`transition-all duration-200 ${isExpanded ? 'opacity-100 translate-x-0 max-w-[210px]' : 'opacity-0 -translate-x-2 max-w-0 pointer-events-none hidden lg:block'}`}>
+              <h1 className="text-xl font-black text-white tracking-tight leading-none whitespace-nowrap">SCIPL Elevate</h1>
+              <p className="text-xs text-blue-400 font-black uppercase tracking-wider whitespace-nowrap mt-1">HR Admin Console</p>
             </div>
           </div>
 
-          {/* Employee Induction Quick Access Switcher Card */}
-          <Link
-            href="/employee/dashboard"
-            className="flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-sm font-medium group backdrop-blur-md"
-          >
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
-              <span className="font-medium text-white">Employee Portal</span>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-
-          {/* Navigation Menu Groups */}
-          <nav className="space-y-6">
+          {/* Navigation Menu Groups (Moved Upward) */}
+          <nav className="space-y-4 pt-1">
             {MENU_GROUPS.map((group, gIdx) => (
               <div key={gIdx} className="space-y-1.5">
-                <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {group.groupLabel}
-                </p>
+                {isExpanded && (
+                  <p className="px-3 text-[11px] font-black uppercase tracking-widest text-slate-300/90 whitespace-nowrap">
+                    {group.groupLabel}
+                  </p>
+                )}
 
                 <div className="space-y-1">
                   {group.items.map((item) => {
@@ -117,19 +123,30 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
                         key={item.href}
                         href={item.href}
                         onClick={onCloseMobile}
-                        className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all relative ${
-                          isActive
-                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_4px_14px_0_rgba(37,99,235,0.35)] border border-blue-400/30 font-semibold'
-                            : 'text-slate-400 hover:text-white hover:bg-white/5 font-medium'
+                        title={!isExpanded ? item.label : undefined}
+                        className={`flex items-center ${isExpanded ? 'justify-between px-1.5' : 'justify-center px-0'} h-11 rounded-xl text-sm transition-all group/item ${
+                          isActive ? 'text-white font-bold' : 'text-slate-300 hover:text-white font-semibold'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                          <span>{item.label}</span>
+                        <div className="flex items-center gap-3 shrink-0">
+                          {/* Symmetrical 40x40px Icon Container */}
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 ${
+                              isActive
+                                ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-[0_4px_14px_0_rgba(37,99,235,0.4)] border border-blue-400/40 scale-[1.03]'
+                                : 'bg-transparent text-slate-300 group-hover/item:bg-white/10 group-hover/item:text-white group-hover/item:scale-[1.03]'
+                            }`}
+                          >
+                            <Icon className="w-5 h-5" />
+                          </div>
+
+                          <span className={`whitespace-nowrap transition-all duration-200 text-sm ${isExpanded ? 'opacity-100 max-w-[180px]' : 'opacity-0 max-w-0 hidden lg:block'}`}>
+                            {item.label}
+                          </span>
                         </div>
 
-                        {item.badge && (
-                          <span className="text-[10px] bg-blue-500/20 text-blue-300 font-bold px-2 py-0.5 rounded-full border border-blue-400/30">
+                        {isExpanded && item.badge && (
+                          <span className="text-[10px] bg-blue-500/20 text-blue-300 font-extrabold px-2.5 py-0.5 rounded-full border border-blue-400/30 shrink-0 mr-2">
                             {item.badge}
                           </span>
                         )}
@@ -142,19 +159,40 @@ export function HRSidebar({ mobileOpen, onCloseMobile }: { mobileOpen?: boolean;
           </nav>
         </div>
 
-        {/* Bottom User Card & Logout */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/40">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-between p-3 rounded-2xl text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            <div className="flex items-center gap-2.5">
-              <LogOut className="w-4 h-4 text-slate-400" />
-              <span>Sign Out Session</span>
+        {/* Compact Symmetrical Bottom User Profile Section */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/50">
+          {isExpanded ? (
+            <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3 overflow-hidden">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-soft-xs border border-blue-400/30">
+                  HR
+                </div>
+                <div className="text-left overflow-hidden">
+                  <p className="text-sm font-extrabold text-white truncate leading-tight">HR Administrator</p>
+                  <p className="text-xs text-slate-400 font-bold truncate mt-0.5">Corporate Admin</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                title="Sign Out Session"
+                className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+              >
+                <LogOut className="w-4.5 h-4.5" />
+              </button>
             </div>
-          </button>
+          ) : (
+            <button
+              onClick={handleLogout}
+              title="HR Administrator - Sign Out"
+              className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center mx-auto shadow-soft-xs border border-blue-400/30 hover:scale-105 transition-transform"
+            >
+              HR
+            </button>
+          )}
         </div>
       </aside>
     </>
   );
 }
+

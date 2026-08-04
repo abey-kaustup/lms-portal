@@ -104,7 +104,7 @@ export default function HRReportsPage() {
       key: 'employeeId',
       header: 'Employee ID',
       render: (row) => (
-        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">
+        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
           {row.employeeId}
         </span>
       ),
@@ -112,7 +112,7 @@ export default function HRReportsPage() {
     {
       key: 'name',
       header: 'Employee Name',
-      render: (row) => <span className="font-bold text-slate-900">{row.name}</span>,
+      render: (row) => <span className="font-bold text-slate-900 dark:text-slate-100">{row.name}</span>,
     },
     {
       key: 'department',
@@ -130,7 +130,7 @@ export default function HRReportsPage() {
       header: 'Lessons Completed',
       align: 'center',
       render: (row) => (
-        <span className="font-semibold text-slate-700">
+        <span className="font-semibold text-slate-700 dark:text-slate-300">
           {row.completedLessonsCount} / {row.totalLessons}
         </span>
       ),
@@ -139,13 +139,13 @@ export default function HRReportsPage() {
       key: 'attemptsCount',
       header: 'Attempts',
       align: 'center',
-      render: (row) => <span className="font-bold text-slate-800">{row.attemptsCount}</span>,
+      render: (row) => <span className="font-bold text-slate-800 dark:text-slate-200">{row.attemptsCount}</span>,
     },
     {
       key: 'bestScore',
       header: 'Best Score',
       align: 'center',
-      render: (row) => <span className="font-bold text-blue-600 font-mono">{row.bestScore}</span>,
+      render: (row) => <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{row.bestScore}</span>,
     },
     {
       key: 'certificateStatus',

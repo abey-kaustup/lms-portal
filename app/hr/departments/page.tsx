@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Building2, Plus, Edit2, Trash2, Users, BookOpen, Search } from 'lucide-react';
+import { DepartmentSkeleton } from '@/components/ui/SkeletonLoader';
 
 export default function HRDepartmentsPage() {
   const { showToast } = useToast();
@@ -112,14 +113,7 @@ export default function HRDepartmentsPage() {
   const totalModules = departments.reduce((acc, curr) => acc + (curr._count?.modules || 0), 0);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-slate-500">Loading Corporate Departments...</p>
-        </div>
-      </div>
-    );
+    return <DepartmentSkeleton />;
   }
 
   return (
@@ -142,14 +136,14 @@ export default function HRDepartmentsPage() {
       />
 
       {/* Filter & Search Bar */}
-      <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-soft-xs flex items-center gap-3">
-        <Search className="w-4 h-4 text-slate-400 shrink-0" />
+      <div className="p-4 bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-soft-xs flex items-center gap-3">
+        <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
         <input
           type="text"
           placeholder="Search by department name, code (e.g. IT, HR, SURVEY), or description..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-transparent text-xs text-slate-900 font-medium focus:outline-none"
+          className="w-full bg-transparent text-xs text-slate-900 dark:text-slate-100 font-medium focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
         />
       </div>
 

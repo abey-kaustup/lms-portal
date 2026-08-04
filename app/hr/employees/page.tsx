@@ -251,7 +251,7 @@ export default function HREmployeesPage() {
       key: 'employeeId',
       header: 'Employee ID',
       render: (row) => (
-        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">
+        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
           {row.employeeId}
         </span>
       ),
@@ -263,14 +263,14 @@ export default function HREmployeesPage() {
         const fullName = `${row.firstName} ${row.middleName ? row.middleName + ' ' : ''}${row.lastName}`;
         return (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-soft-xs">
               {row.firstName.charAt(0)}
             </div>
             <div>
-              <Link href={`/hr/employees/${row.id}`} className="font-bold text-slate-900 hover:text-blue-600">
+              <Link href={`/hr/employees/${row.id}`} className="font-bold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                 {fullName}
               </Link>
-              <p className="text-[11px] text-slate-400 font-medium">{row.email}</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-400 font-medium">{row.email}</p>
             </div>
           </div>
         );
@@ -284,7 +284,7 @@ export default function HREmployeesPage() {
     {
       key: 'designation',
       header: 'Designation',
-      render: (row) => <span className="font-medium text-slate-700">{row.designation}</span>,
+      render: (row) => <span className="font-medium text-slate-700 dark:text-slate-300">{row.designation}</span>,
     },
     {
       key: 'status',

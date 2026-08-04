@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   AlertTriangle,
 } from 'lucide-react';
+import { AssessmentSkeleton } from '@/components/ui/SkeletonLoader';
 
 export default function EmployeeAssessmentPage() {
   const router = useRouter();
@@ -113,14 +114,7 @@ export default function EmployeeAssessmentPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-slate-500">Loading Proctored Assessment...</p>
-        </div>
-      </div>
-    );
+    return <AssessmentSkeleton />;
   }
 
   if (!learningState?.isAssessmentUnlocked && !learningState?.isCourseFullyCompleted) {
@@ -203,7 +197,7 @@ export default function EmployeeAssessmentPage() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <h3 className="text-base font-bold text-slate-900">{q.questionText}</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{q.questionText}</h3>
 
                 <div className="space-y-2.5">
                   {q.options.map((opt: string, optIdx: number) => {
@@ -216,8 +210,8 @@ export default function EmployeeAssessmentPage() {
                         onClick={() => handleOptionSelect(q.id, optIdx)}
                         className={`w-full text-left p-4 rounded-2xl border text-xs font-semibold transition-all flex items-center justify-between ${
                           isSelected
-                            ? 'bg-blue-50 border-blue-600 text-blue-900 ring-2 ring-blue-500/20'
-                            : 'bg-slate-50/60 hover:bg-slate-100 border-slate-200 text-slate-700'
+                            ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-600 dark:border-blue-500 text-blue-900 dark:text-blue-200 ring-2 ring-blue-500/20'
+                            : 'bg-slate-50/60 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -225,7 +219,7 @@ export default function EmployeeAssessmentPage() {
                             className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold ${
                               isSelected
                                 ? 'border-blue-600 bg-blue-600 text-white'
-                                : 'border-slate-300 text-slate-500'
+                                : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400'
                             }`}
                           >
                             {String.fromCharCode(65 + optIdx)}

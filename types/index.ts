@@ -21,6 +21,7 @@ export interface UserSession {
   departmentId?: string | null;
   designation?: string;
   isMasterTester?: boolean;
+  accessToken?: string; // ASP.NET Core JWT Bearer token
 }
 
 export interface EmployeeFormData {

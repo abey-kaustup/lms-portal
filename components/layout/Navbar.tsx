@@ -4,6 +4,7 @@ import React from 'react';
 import { UserSession } from '@/types';
 import { logoutClient } from '@/lib/auth-client';
 import { GraduationCap, LogOut, User, ShieldCheck, Building2 } from 'lucide-react';
+import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 
 interface NavbarProps {
   session: UserSession;
@@ -19,22 +20,22 @@ export function Navbar({ session }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-xl shadow-xs text-white">
-            <GraduationCap className="w-6 h-6" />
-          </div>
+          <img src="/logo.png" alt="SCIPL Elevate Logo" className="h-9 w-auto object-contain shrink-0" />
           <div>
-            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-              Corporate LMS Portal
+            <h1 className="text-base font-black tracking-tight text-white flex items-center gap-2">
+              SCIPL Elevate
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800">
-                Enterprise
+                Corporate LMS
               </span>
             </h1>
-            <p className="text-xs text-slate-400">Employee Induction & Compliance Management</p>
+            <p className="text-xs text-slate-400 font-medium">Employee Induction & Compliance Portal</p>
           </div>
         </div>
 
-        {/* Right Session info & Logout */}
+        {/* Right Session info & Theme Switcher & Logout */}
         <div className="flex items-center gap-4">
+          <ThemeSwitcher />
+          
           <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80">
             <div className="p-1.5 rounded-lg bg-slate-700 text-slate-300">
               {session.role === 'HR_ADMIN' ? (

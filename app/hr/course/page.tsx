@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
+import { LearningCenterSkeleton } from '@/components/ui/SkeletonLoader';
 import {
   BookOpen,
   Plus,
@@ -292,14 +293,7 @@ export default function HRCoursePage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-slate-500">Loading Curriculum Architecture...</p>
-        </div>
-      </div>
-    );
+    return <LearningCenterSkeleton />;
   }
 
   const commonModules = course?.modules?.filter((m: any) => m.moduleType === 'COMMON') || [];
@@ -391,25 +385,25 @@ export default function HRCoursePage() {
                   mod.lessons.map((les: any) => (
                     <div
                       key={les.id}
-                      className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      className="p-3.5 bg-slate-50/80 dark:bg-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-white border border-slate-200 text-blue-600 shadow-soft-xs">
+                        <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 shadow-soft-xs">
                           {les.contentType === 'VIDEO' && <Video className="w-4 h-4" />}
                           {les.contentType === 'PDF' && <FileText className="w-4 h-4" />}
                           {les.contentType === 'VIDEO_PDF' && <PlayCircle className="w-4 h-4" />}
                         </div>
 
                         <div>
-                          <p className="font-bold text-slate-900">{les.title}</p>
-                          <p className="text-slate-500 text-[11px] font-medium line-clamp-1">{les.description}</p>
+                          <p className="font-bold text-slate-900 dark:text-slate-100">{les.title}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-[11px] font-medium line-clamp-1">{les.description}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-auto">
                         <Badge variant="info">{les.contentType}</Badge>
                         <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditLesson(les)} />
-                        <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteLesson(les.id, les.title)} />
+                        <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40" onClick={() => handleDeleteLesson(les.id, les.title)} />
                       </div>
                     </div>
                   ))
@@ -422,30 +416,25 @@ export default function HRCoursePage() {
 
       {/* 2. Department Modules Section */}
       <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-purple-50 text-purple-600 rounded-xl border border-purple-100">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">2. Department-Specific Modules</h3>
-              <p className="text-xs text-slate-500 font-medium">Unlocked automatically after completing common induction modules</p>
-            </div>
+            <Building2 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">2. Department Modules</h3>
           </div>
-          <Badge variant="warning">Unlocked Post Common</Badge>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Unlocked after completing common core</span>
         </div>
 
         <div className="space-y-4">
           {deptModules.map((mod: any, mIdx: number) => (
             <Card key={mod.id}>
-              <CardHeader className="flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
+              <CardHeader className="flex-row items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">
-                        Department Training
+                      <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                        Department Module 0{mIdx + 1}
                       </span>
-                      <Badge variant="purple">{mod.department?.name || 'Assigned Dept'}</Badge>
+                      <Badge variant="purple">{mod.departmentRel?.name || 'DEPARTMENT'}</Badge>
                     </div>
                     <CardTitle className="mt-0.5">{mod.title}</CardTitle>
                     {mod.description && <CardDescription className="mt-0.5">{mod.description}</CardDescription>}
@@ -457,7 +446,7 @@ export default function HRCoursePage() {
                     Add Lesson
                   </Button>
                   <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditModule(mod)} />
-                  <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteModule(mod.id, mod.title)} />
+                  <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40" onClick={() => handleDeleteModule(mod.id, mod.title)} />
                 </div>
               </CardHeader>
 
@@ -468,25 +457,25 @@ export default function HRCoursePage() {
                   mod.lessons.map((les: any) => (
                     <div
                       key={les.id}
-                      className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      className="p-3.5 bg-slate-50/80 dark:bg-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-white border border-slate-200 text-purple-600 shadow-soft-xs">
+                        <div className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-purple-600 dark:text-purple-400 shadow-soft-xs">
                           {les.contentType === 'VIDEO' && <Video className="w-4 h-4" />}
                           {les.contentType === 'PDF' && <FileText className="w-4 h-4" />}
                           {les.contentType === 'VIDEO_PDF' && <PlayCircle className="w-4 h-4" />}
                         </div>
 
                         <div>
-                          <p className="font-bold text-slate-900">{les.title}</p>
-                          <p className="text-slate-500 text-[11px] font-medium line-clamp-1">{les.description}</p>
+                          <p className="font-bold text-slate-900 dark:text-slate-100">{les.title}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-[11px] font-medium line-clamp-1">{les.description}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-auto">
                         <Badge variant="purple">{les.contentType}</Badge>
                         <Button variant="ghost" size="sm" icon={Edit2} onClick={() => handleOpenEditLesson(les)} />
-                        <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteLesson(les.id, les.title)} />
+                        <Button variant="ghost" size="sm" icon={Trash2} className="text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40" onClick={() => handleDeleteLesson(les.id, les.title)} />
                       </div>
                     </div>
                   ))

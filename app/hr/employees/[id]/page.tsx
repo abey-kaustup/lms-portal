@@ -41,7 +41,10 @@ export default async function HREmployeeProfilePage({ params }: { params: Promis
   });
 
   const completedLessons = employee.lessonProgresses.filter((p) => p.isCompleted);
-  const topAttempt = employee.assessmentAttempts[0];
+  const bestAttempt = employee.assessmentAttempts.reduce(
+    (best, curr) => (!best || curr.score > best.score ? curr : best),
+    null as (typeof employee.assessmentAttempts)[0] | null
+  );
 
   return (
     <div className="space-y-6">
@@ -154,7 +157,7 @@ export default async function HREmployeeProfilePage({ params }: { params: Promis
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60">
                 <p className="text-xs text-slate-500 font-semibold">Best Assessment Score</p>
                 <p className="text-2xl font-black text-blue-600 mt-1">
-                  {topAttempt ? `${topAttempt.score}%` : 'Not Attempted'}
+                  {bestAttempt ? `${bestAttempt.score}%` : 'Not Attempted'}
                 </p>
               </div>
             </div>

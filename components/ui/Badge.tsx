@@ -1,4 +1,5 @@
 import React from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface BadgeProps {
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'purple';
@@ -44,6 +45,8 @@ export function StatCard({
   value,
   subtitle,
   icon: Icon,
+  trend,
+  trendUp = true,
   color = 'blue',
   progress,
   badgeText,
@@ -84,44 +87,71 @@ export function StatCard({
   }[color];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white p-5 border border-slate-200/80 shadow-[0_4px_20px_-2px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-slate-300 group flex flex-col justify-between">
+    <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900/90 p-3.5 border border-slate-200/80 dark:border-slate-800/80 shadow-soft-xs min-h-[104px] transition-all duration-200 hover:-translate-y-1 hover:shadow-soft-md hover:border-slate-300 dark:hover:border-slate-700 group flex flex-col justify-between micro-lift">
       {/* Background Subtle Gradient Glow */}
-      <div className={`absolute -right-8 -top-8 w-28 h-28 bg-gradient-to-br ${colorMap.glow} rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-500`} />
+      <div className={`absolute -right-6 -top-6 w-16 h-16 bg-gradient-to-br ${colorMap.glow} rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform duration-500`} />
 
-      <div className="relative z-10 space-y-3">
+      <div className="relative z-10 space-y-1">
         {/* Top Header Row */}
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 truncate">
             {title}
           </span>
           {badgeText && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${colorMap.badge}`}>
+            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full border shrink-0 ${colorMap.badge}`}>
               {badgeText}
             </span>
           )}
         </div>
 
         {/* Center Content Row */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+        <div className="flex items-center justify-between gap-2">
+          <div className="space-y-0.5 min-w-0">
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight truncate leading-none">
               {value}
             </p>
-            {subtitle && (
-              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+
+            {/* Zig-Zag Upward / Downward Trend Indicator with Count/Percentage */}
+            {trend && (
+              <div className="flex items-center gap-1 pt-1">
+                <span
+                  className={`inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md border shadow-2xs ${
+                    trendUp
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                  }`}
+                >
+                  {trendUp ? (
+                    <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3 text-red-600 dark:text-red-400 stroke-[2.5]" />
+                  )}
+                  <span>{trend}</span>
+                </span>
+              </div>
+            )}
+
+            {subtitle && !trend && (
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium leading-tight truncate">
                 {subtitle}
               </p>
             )}
           </div>
-          <div className={`p-3 rounded-2xl border shrink-0 backdrop-blur-md transition-transform group-hover:scale-110 shadow-xs ${colorMap.bg}`}>
-            <Icon className="w-6 h-6" />
+          <div className={`p-1.5 rounded-xl border shrink-0 backdrop-blur-md transition-transform group-hover:scale-105 shadow-xs ${colorMap.bg}`}>
+            <Icon className="w-4 h-4" />
           </div>
         </div>
 
+        {subtitle && trend && (
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-tight truncate pt-0.5">
+            {subtitle}
+          </p>
+        )}
+
         {/* Optional Micro Progress Bar */}
         {typeof progress === 'number' && (
-          <div className="pt-2 space-y-1">
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className="pt-0.5">
+            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className={`h-full ${colorMap.progress} rounded-full transition-all duration-500`}
                 style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
@@ -133,7 +163,7 @@ export function StatCard({
 
       {/* Optional Bottom Action Link */}
       {actionHref && actionText && (
-        <div className="relative z-10 pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
+        <div className="relative z-10 pt-1 mt-0.5 border-t border-slate-100/80 flex items-center justify-between text-[10px] font-bold">
           <a
             href={actionHref}
             className="text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group-hover:translate-x-0.5"

@@ -57,7 +57,7 @@ export default function HRActivityLogsPage() {
       key: 'createdAt',
       header: 'Timestamp',
       render: (row) => (
-        <span className="font-mono text-slate-500 font-semibold">
+        <span className="font-mono text-slate-500 dark:text-slate-400 font-semibold">
           {new Date(row.createdAt).toLocaleString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -72,7 +72,7 @@ export default function HRActivityLogsPage() {
       key: 'user',
       header: 'User Identity',
       render: (row) => (
-        <span className="font-bold text-slate-900">
+        <span className="font-bold text-slate-900 dark:text-slate-100">
           {row.employee
             ? `${row.employee.firstName} ${row.employee.lastName} (${row.employee.employeeId})`
             : row.hrUser?.name || row.userId}
@@ -110,7 +110,7 @@ export default function HRActivityLogsPage() {
     {
       key: 'details',
       header: 'Activity Details',
-      render: (row) => <span className="text-slate-600 font-medium">{row.details}</span>,
+      render: (row) => <span className="text-slate-600 dark:text-slate-300 font-medium">{row.details}</span>,
     },
   ];
 
@@ -143,8 +143,8 @@ export default function HRActivityLogsPage() {
         totalRecords={total}
         onPageChange={(p) => setPage(p)}
         filterControls={
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
               <Filter className="w-3.5 h-3.5" />
               <span>Role:</span>
               <select
@@ -153,7 +153,7 @@ export default function HRActivityLogsPage() {
                   setRoleFilter(e.target.value);
                   setPage(1);
                 }}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none"
               >
                 <option value="ALL">All Roles</option>
                 <option value="EMPLOYEE">Employee</option>
@@ -161,7 +161,7 @@ export default function HRActivityLogsPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
               <span>Action:</span>
               <select
                 value={actionFilter}
@@ -169,7 +169,7 @@ export default function HRActivityLogsPage() {
                   setActionFilter(e.target.value);
                   setPage(1);
                 }}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
+                className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none"
               >
                 <option value="ALL">All Event Types</option>
                 <option value="LOGIN">LOGIN</option>

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { loginHR, loginEmployee } from '@/actions/auth';
-import { GraduationCap, ShieldCheck, User, ArrowRight, Lock } from 'lucide-react';
+import { ShieldCheck, User, ArrowRight, Lock } from 'lucide-react';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -47,7 +48,7 @@ function LoginFormContent() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     const formData = new FormData();
     formData.append('username', hrUsername);
     formData.append('password', hrPassword);
@@ -72,32 +73,36 @@ function LoginFormContent() {
   };
 
   return (
-    <div className="apple-glass rounded-3xl shadow-[0_16px_48px_0_rgba(15,23,42,0.1)] border border-white/80 p-6 sm:p-8">
+    <div className="bg-white/95 rounded-3xl shadow-[0_16px_48px_0_rgba(15,23,42,0.12)] border border-slate-200/90 p-6 sm:p-8 text-slate-900">
       {/* Tab Switcher */}
-      <div className="grid grid-cols-2 gap-1 p-1.5 bg-slate-200/50 backdrop-blur-md rounded-2xl mb-6 border border-white/60">
+      <div className="grid grid-cols-2 gap-1 p-1.5 bg-slate-100 rounded-2xl mb-6 border border-slate-200/80">
         <button
+          type="button"
           onClick={() => {
             setTab('EMPLOYEE');
             setError('');
           }}
-          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${tab === 'EMPLOYEE'
-            ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
-            : 'text-slate-500 hover:text-slate-800'
-            }`}
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            tab === 'EMPLOYEE'
+              ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
         >
           <User className="w-4 h-4 text-emerald-600" />
           <span>Employee Login</span>
         </button>
 
         <button
+          type="button"
           onClick={() => {
             setTab('HR');
             setError('');
           }}
-          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${tab === 'HR'
-            ? 'bg-white text-slate-900 shadow-sm border border-slate-200/60'
-            : 'text-slate-500 hover:text-slate-800'
-            }`}
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            tab === 'HR'
+              ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
         >
           <ShieldCheck className="w-4 h-4 text-blue-600" />
           <span>HR Admin</span>
@@ -105,7 +110,7 @@ function LoginFormContent() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 backdrop-blur-md text-xs font-semibold text-red-800">
+        <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-red-800">
           {error}
         </div>
       )}
@@ -122,7 +127,7 @@ function LoginFormContent() {
                 placeholder="e.g. EMP1001"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
-                className="apple-input w-full pl-3.5 pr-10 py-3 text-sm font-semibold text-slate-900 uppercase focus:outline-none"
+                className="w-full pl-3.5 pr-10 py-3 text-sm font-semibold text-slate-900 uppercase bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               />
               <User className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
             </div>
@@ -148,7 +153,7 @@ function LoginFormContent() {
             </button>
           </div>
 
-          <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-left backdrop-blur-md">
+          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-left">
             <p className="text-[11px] font-bold text-emerald-900">Demo Employee ID:</p>
             <p className="text-[11px] text-emerald-700 font-mono mt-0.5">EMP1001, EMP1002, EMP1003</p>
           </div>
@@ -158,14 +163,17 @@ function LoginFormContent() {
         <form onSubmit={handleHRLogin} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-700">HR Username</label>
-            <input
-              type="text"
-              required
-              placeholder="admin"
-              value={hrUsername}
-              onChange={(e) => setHrUsername(e.target.value)}
-              className="apple-input w-full px-3.5 py-3 text-sm text-slate-900 focus:outline-none"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                required
+                placeholder="HR Admin Username"
+                value={hrUsername}
+                onChange={(e) => setHrUsername(e.target.value)}
+                className="w-full pl-3.5 pr-10 py-3 text-sm font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              />
+              <User className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -177,7 +185,7 @@ function LoginFormContent() {
                 placeholder="••••••••"
                 value={hrPassword}
                 onChange={(e) => setHrPassword(e.target.value)}
-                className="apple-input w-full pl-3.5 pr-10 py-3 text-sm text-slate-900 focus:outline-none"
+                className="w-full pl-3.5 pr-10 py-3 text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               />
               <Lock className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
             </div>
@@ -200,7 +208,7 @@ function LoginFormContent() {
             </button>
           </div>
 
-          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-left backdrop-blur-md">
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-2xl text-left">
             <p className="text-[11px] font-bold text-blue-900">Demo HR Admin Credentials:</p>
             <p className="text-[11px] text-blue-700 font-mono mt-0.5">Username: admin | Password: admin123</p>
           </div>
@@ -211,22 +219,31 @@ function LoginFormContent() {
 }
 
 export default function LoginPage() {
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    // Force Light Mode strictly for the Login page
+    setTheme('light');
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  }, [setTheme]);
+
   return (
-    <div className="min-h-screen bg-slate-100/90 relative overflow-hidden flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-slate-100/90 text-slate-900 relative overflow-hidden flex items-center justify-center p-4 sm:p-6 lg:p-8">
       {/* Ambient Glassmorphism Light Orbs Background */}
       <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/3 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md space-y-6 relative z-10">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center p-3.5 bg-gradient-to-b from-slate-800 to-slate-900 text-white rounded-3xl shadow-[0_8px_24px_0_rgba(15,23,42,0.2)] border border-slate-700/50 mb-3">
-            <GraduationCap className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Corporate LMS Portal</h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">Employee Induction & Compliance Platform</p>
+          <img src="/logo.png" alt="SCIPL Elevate Logo" className="h-16 w-auto object-contain mx-auto mb-3 drop-shadow-md" />
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">SCIPL Elevate</h1>
+          <p className="text-xs font-semibold text-slate-500 mt-1">Corporate LMS Portal • Induction & Compliance</p>
         </div>
 
-        <Suspense fallback={<div className="p-8 apple-glass rounded-3xl text-center text-xs text-slate-400">Loading Login...</div>}>
+        <Suspense fallback={<div className="p-8 bg-white rounded-3xl text-center text-xs text-slate-400">Loading Login...</div>}>
           <LoginFormContent />
         </Suspense>
 

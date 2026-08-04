@@ -19,6 +19,7 @@ import {
   User,
   Calendar,
 } from 'lucide-react';
+import { CertificateSkeleton } from '@/components/ui/SkeletonLoader';
 
 export default function EmployeeCertificatePage() {
   const { showToast } = useToast();
@@ -88,31 +89,30 @@ export default function EmployeeCertificatePage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-3">
-          <div className="w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-slate-500">Loading Official Certificate...</p>
-        </div>
-      </div>
-    );
+    return <CertificateSkeleton />;
   }
 
   if (!certData) {
     return (
-      <div className="p-8 bg-white rounded-3xl text-center border border-slate-200 shadow-soft-xs max-w-xl mx-auto space-y-4">
-        <div className="w-12 h-12 bg-amber-50 rounded-2xl text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
-          <Award className="w-6 h-6" />
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] p-4">
+        <div className="p-8 sm:p-10 bg-white dark:bg-slate-900/90 rounded-3xl text-center border border-slate-200 dark:border-slate-800 shadow-xl max-w-xl w-full space-y-5 transition-all">
+          <div className="w-14 h-14 bg-amber-500/10 rounded-2xl text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 shadow-soft-xs">
+            <Award className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Certificate Pending</h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-md mx-auto">
+              Your official corporate certificate will be issued automatically once you pass the final induction assessment.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link href="/employee/assessment">
+              <Button variant="primary" size="md" className="px-6 py-2.5 font-bold shadow-md">
+                Go to Assessment Test
+              </Button>
+            </Link>
+          </div>
         </div>
-        <h3 className="text-lg font-bold text-slate-900">Certificate Pending</h3>
-        <p className="text-xs text-slate-500 font-medium">
-          Your official corporate certificate will be issued automatically once you pass the final induction assessment.
-        </p>
-        <Link href="/employee/assessment">
-          <Button variant="primary">
-            Go to Assessment Test
-          </Button>
-        </Link>
       </div>
     );
   }

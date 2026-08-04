@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: var(--font-poppins), 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-poppins: var(--font-poppins), 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -19,10 +21,79 @@
     --danger: #EF4444;
     --card: #FFFFFF;
     --border: #E2E8F0;
-    --radius-lg: 0.75rem; /* 12px */
-    --radius-xl: 1rem;    /* 16px */
-    --radius-2xl: 1.25rem;/* 20px */
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.25rem;
   }
+
+  .dark {
+    --background: #090D16;
+    --foreground: #F8FAFC;
+    --card: #0F172A;
+    --border: #1E293B;
+    color-scheme: dark;
+  }
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #090D16;
+  color: #F8FAFC;
+}
+
+/* Apple Card Elevated Glass */
+.apple-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 1);
+}
+
+.dark .apple-card {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(30, 41, 59, 0.7);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+.dark .apple-card:hover {
+  border-color: rgba(51, 65, 85, 0.9);
+  box-shadow: 0 16px 44px 0 rgba(0, 0, 0, 0.48), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Radial Light Bulb View Transition Animation (Top-Right -> Bottom-Left) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+.dark::view-transition-old(root) {
+  z-index: 9999;
+}
+
+.dark::view-transition-new(root) {
+  z-index: 1;
 }
 
 body {
@@ -39,7 +110,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-code, kbd, samp, pre, .font-mono {
+code,
+kbd,
+samp,
+pre,
+.font-mono {
   font-family: var(--font-mono) !important;
 }
 
@@ -50,7 +125,8 @@ code, kbd, samp, pre, .font-mono {
 }
 
 /* Page Titles: 32-36px, Bold (700) */
-h1, .text-h1 {
+h1,
+.text-h1 {
   font-size: 34px;
   line-height: 42px;
   font-weight: 700;
@@ -58,7 +134,8 @@ h1, .text-h1 {
 }
 
 /* Section Titles: 24-28px, SemiBold (600) */
-h2, .text-h2 {
+h2,
+.text-h2 {
   font-size: 26px;
   line-height: 34px;
   font-weight: 600;
@@ -66,7 +143,8 @@ h2, .text-h2 {
 }
 
 /* Card Titles: 18-22px, SemiBold (600) */
-h3, .text-h3 {
+h3,
+.text-h3 {
   font-size: 20px;
   line-height: 28px;
   font-weight: 600;
@@ -86,7 +164,8 @@ h3, .text-h3 {
 }
 
 /* Helper Text: 13-14px, Regular (400) */
-.text-secondary-text, .helper-text {
+.text-secondary-text,
+.helper-text {
   font-size: 13px;
   line-height: 18px;
   font-weight: 400;
@@ -99,30 +178,35 @@ h3, .text-h3 {
 }
 
 /* Buttons: 14-15px, Medium (500) */
-button, .btn-text {
+button,
+.btn-text {
   font-size: 14px;
   font-weight: 500;
 }
 
 /* Form Labels: 14px, Medium (500) */
-label, .form-label {
+label,
+.form-label {
   font-size: 14px;
   font-weight: 500;
 }
 
 /* Table Headers: 14-15px, SemiBold (600) */
-.table-header, th {
+.table-header,
+th {
   font-size: 14px;
   font-weight: 600;
 }
 
-.table-body, td {
+.table-body,
+td {
   font-size: 14px;
   font-weight: 400;
 }
 
 /* Navigation: 15px, Medium (500) */
-.sidebar-menu, nav a {
+.sidebar-menu,
+nav a {
   font-size: 15px;
   font-weight: 500;
 }
@@ -173,6 +257,121 @@ label, .form-label {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* CTA Pulse Glow */
+@keyframes ctaPulseGlow {
+  0%, 100% { box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.35); }
+  50% { box-shadow: 0 4px 22px 0 rgba(37, 99, 235, 0.65); }
+}
+
+.cta-pulse-glow {
+  animation: ctaPulseGlow 3s infinite ease-in-out;
+}
+
+/* Linear / Vercel / Stripe Premium Shimmer Skeleton Animation */
+@keyframes shimmer-wave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: #e2e8f0; /* slate-200 */
+}
+
+.dark .skeleton-shimmer {
+  background-color: #1e293b; /* slate-800 */
+}
+
+.skeleton-shimmer::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.45) 20%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer-wave 1.35s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  content: '';
+}
+
+.dark .skeleton-shimmer::after {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.apple-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark .apple-glass {
+  background: rgba(15, 23, 42, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(30, 41, 59, 0.8) !important;
+}
+
+.apple-input {
+  background: rgba(248, 250, 252, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  color: #0f172a;
+}
+
+.dark .apple-input {
+  background: rgba(30, 41, 59, 0.7) !important;
+  border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  color: #f8fafc !important;
+}
+
+.dark .apple-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none;
+  }
+}
+
+/* Smooth Liquid Hover Dropdown Animations */
+.smooth-dropdown {
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1), visibility 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+}
+
+.smooth-dropdown-hidden {
+  opacity: 0;
+  transform: scale(0.95) translateY(-8px);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.smooth-dropdown-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .apple-btn-glossy::before {
   content: '';
   position: absolute;
@@ -216,6 +415,7 @@ label, .form-label {
     opacity: 0;
     transform: translateY(-8px) scale(0.95);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -227,6 +427,7 @@ label, .form-label {
     opacity: 0;
     transform: translateY(-8px) scale(0.95);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -238,6 +439,7 @@ label, .form-label {
     opacity: 0;
     transform: translateY(-10px) scale(0.96);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -267,6 +469,7 @@ label, .form-label {
 
 /* Accessibility: Respect prefers-reduced-motion setting */
 @media (prefers-reduced-motion: reduce) {
+
   .apple-dropdown-anim,
   .apple-dropdown-anim-left,
   .apple-dropdown-anim-center {
@@ -280,13 +483,16 @@ label, .form-label {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: #F1F5F9;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #CBD5E1;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
@@ -295,15 +501,125 @@ label, .form-label {
 .shadow-soft-xs {
   box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
 }
+
 .shadow-soft-sm {
   box-shadow: 0 2px 4px 0 rgba(15, 23, 42, 0.04), 0 1px 2px 0 rgba(15, 23, 42, 0.02);
 }
+
 .shadow-soft-md {
   box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
 }
+
 .shadow-soft-lg {
   box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
 }
+
 .shadow-soft-xl {
   box-shadow: 0 20px 32px -6px rgba(15, 23, 42, 0.12), 0 8px 16px -4px rgba(15, 23, 42, 0.06);
+}
+
+/* ==========================================================================
+   Compact Enterprise Dashboard Layout & Micro-Interactions (Linear Inspired)
+   ========================================================================== */
+
+:root {
+  --sidebar-collapsed: 72px;
+  --sidebar-expanded: 300px;
+}
+
+/* Hover Expandable Sidebar Transition System */
+.hover-sidebar-container {
+  width: var(--sidebar-collapsed);
+  transition: width 280ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 280ms ease;
+  will-change: width, transform;
+}
+
+.hover-sidebar-container:hover,
+.hover-sidebar-container[data-expanded="true"] {
+  width: var(--sidebar-expanded);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+/* Text & Subtitle Fade & Slide in Hover Sidebar */
+.sidebar-label {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1), max-width 280ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms ease;
+  transform: translateX(-6px);
+}
+
+.hover-sidebar-container:hover .sidebar-label,
+.hover-sidebar-container[data-expanded="true"] .sidebar-label {
+  opacity: 1;
+  max-width: 200px;
+  transform: translateX(0);
+}
+
+/* Hide elements when collapsed */
+.sidebar-expanded-only {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease, visibility 200ms ease;
+}
+
+.hover-sidebar-container:hover .sidebar-expanded-only,
+.hover-sidebar-container[data-expanded="true"] .sidebar-expanded-only {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Linear Active Nav Item Indicator */
+.sidebar-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: #2563EB;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.8);
+}
+
+/* High Density Compact Card Styling */
+.compact-card {
+  padding: 1rem !important;
+  /* 16px */
+  border-radius: 1rem !important;
+  /* 16px */
+}
+
+/* Compact Table Row System */
+.compact-table th {
+  padding-top: 0.625rem !important;
+  padding-bottom: 0.625rem !important;
+}
+
+.compact-table td {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+/* Micro Interaction Effects */
+.micro-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.micro-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+
+.micro-press:active {
+  transform: scale(0.97);
+}
+
+/* Circular Progress Ring Animation */
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
 }

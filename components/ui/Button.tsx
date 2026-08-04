@@ -23,12 +23,12 @@ export function Button({
   ...props
 }: ButtonProps) {
   const alignStyle = className.includes('justify-') ? '' : 'justify-center';
-  const baseStyles = `inline-flex items-center ${alignStyle} font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none text-sm active:scale-[0.98]`;
+  const baseStyles = `inline-flex items-center ${alignStyle} font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97] hover:-translate-y-0.5`;
 
   const sizeStyles = {
-    sm: 'px-3.5 py-1.5 rounded-xl gap-1.5 h-8 text-[13px]',
-    md: 'px-4 py-2 rounded-xl gap-2 h-10 text-sm',
-    lg: 'px-5 py-2.5 rounded-2xl gap-2.5 h-12 text-sm font-semibold',
+    sm: 'px-3 py-1 rounded-xl gap-1.5 h-7 text-xs font-semibold',
+    md: 'px-3.5 py-1.5 rounded-xl gap-1.5 h-9 text-xs sm:text-sm font-semibold',
+    lg: 'px-4.5 py-2 rounded-xl gap-2 h-10.5 text-sm font-bold',
   }[size];
 
   const variantStyles = {
