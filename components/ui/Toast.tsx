@@ -20,10 +20,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, type, message }]);
+    // Enforce SINGLE toast rule: clear active toasts and display only the newest one
+    setToasts([{ id, type, message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, 3500);
   };
 
   const removeToast = (id: string) => {

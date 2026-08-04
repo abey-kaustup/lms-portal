@@ -351,9 +351,6 @@ export function HRHeader({
             </div>
           </div>
 
-          {/* Theme Switcher Component */}
-          <ThemeSwitcher />
-
           {/* 3. User Profile Dropdown (Open on Hover) */}
           <div
             className="relative group"

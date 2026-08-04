@@ -43,6 +43,7 @@ export default function HREmployeesPage() {
   const [page, setPage] = useState(1);
 
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
+  const [departmentItems, setDepartmentItems] = useState<{id: number; name: string}[]>([]);
   const [search, setSearch] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -61,7 +62,8 @@ export default function HREmployeesPage() {
     lastName: '',
     email: '',
     department: '',
-    designation: 'Staff',
+    departmentId: '',
+    designation: 'Staff Employee',
     office: 'Corporate HQ',
     joiningDate: new Date().toISOString().split('T')[0],
     status: 'ACTIVE',
@@ -89,6 +91,9 @@ export default function HREmployeesPage() {
       if (res.departments && res.departments.length > 0) {
         setDepartmentsList(res.departments);
       }
+      if (res.departmentItems && res.departmentItems.length > 0) {
+        setDepartmentItems(res.departmentItems.map((d: any) => ({ id: d.id, name: d.departmentName || d.name })));
+      }
     } catch (err: any) {
       showToast(err.message || 'Failed to fetch employee directory', 'error');
     } finally {
@@ -102,13 +107,15 @@ export default function HREmployeesPage() {
 
   const handleOpenAddModal = () => {
     setEditingEmployee(null);
+    const firstDept = departmentItems[0];
     setFormData({
       employeeId: '',
       firstName: '',
       middleName: '',
       lastName: '',
       email: '',
-      department: departmentsList[0] || 'IT',
+      department: firstDept?.name || departmentsList[0] || 'Information Technology',
+      departmentId: firstDept ? String(firstDept.id) : '1',
       designation: 'Staff Employee',
       office: 'Corporate HQ',
       joiningDate: new Date().toISOString().split('T')[0],
@@ -126,6 +133,7 @@ export default function HREmployeesPage() {
       lastName: emp.lastName,
       email: emp.email,
       department: emp.department,
+      departmentId: emp.departmentId || '1',
       designation: emp.designation,
       office: emp.office,
       joiningDate: new Date(emp.joiningDate).toISOString().split('T')[0],
@@ -157,6 +165,7 @@ export default function HREmployeesPage() {
       const res = await saveEmployee({
         id: editingEmployee?.id,
         ...formData,
+        departmentId: formData.departmentId || '1',
       });
 
       if (res.success) {
@@ -498,15 +507,25 @@ export default function HREmployeesPage() {
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700">Department</label>
               <select
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                value={formData.departmentId}
+                onChange={(e) => {
+                  const selected = departmentItems.find(d => String(d.id) === e.target.value);
+                  setFormData({ ...formData, departmentId: e.target.value, department: selected?.name || e.target.value });
+                }}
                 className="w-full px-3 py-2 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               >
-                {departmentsList.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
+                {departmentItems.length > 0
+                  ? departmentItems.map((dept) => (
+                      <option key={dept.id} value={String(dept.id)}>
+                        {dept.name}
+                      </option>
+                    ))
+                  : departmentsList.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))
+                }
               </select>
             </div>
 

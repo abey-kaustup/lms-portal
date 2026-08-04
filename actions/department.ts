@@ -1,8 +1,9 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 
 export async function getDepartments() {
   const session = await getSession();
@@ -10,20 +11,34 @@ export async function getDepartments() {
     throw new Error('Unauthorized');
   }
 
-  const departments = await prisma.department.findMany({
-    where: { isDeleted: false },
-    orderBy: { name: 'asc' },
-    include: {
-      _count: {
-        select: {
-          employees: { where: { isDeleted: false } },
-          modules: { where: { isDeleted: false } },
-        },
+  try {
+    const res = await fetch(`${API_BASE}/departments`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
       },
-    },
-  });
+      cache: 'no-store',
+    });
 
-  return departments;
+    if (!res.ok) return [];
+
+    const json = await res.json();
+    const rawDepts = json.data || [];
+
+    return rawDepts.map((d: any) => ({
+      id: String(d.id),
+      name: d.departmentName || d.name,
+      code: d.departmentCode || d.code,
+      description: d.description,
+      _count: {
+        employees: d.employeeCount ?? d._count?.employees ?? 0,
+        modules: d.moduleCount ?? d._count?.modules ?? 0,
+      },
+    }));
+  } catch (err: any) {
+    console.error('[getDepartments] API error:', err);
+    return [];
+  }
 }
 
 export async function saveDepartment(data: {
@@ -45,46 +60,27 @@ export async function saveDepartment(data: {
       return { success: false, error: 'Department Name and Code are required.' };
     }
 
-    if (data.id) {
-      // Check duplicate
-      const existing = await prisma.department.findFirst({
-        where: {
-          NOT: { id: data.id },
-          OR: [{ name: cleanName }, { code: cleanCode }],
-        },
-      });
+    const payload = {
+      id: data.id ? parseInt(data.id, 10) : null,
+      departmentName: cleanName,
+      departmentCode: cleanCode,
+      description: data.description?.trim() || null,
+    };
 
-      if (existing) {
-        return { success: false, error: 'A department with this Name or Code already exists.' };
-      }
+    const res = await fetch(`${API_BASE}/departments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
 
-      await prisma.department.update({
-        where: { id: data.id },
-        data: {
-          name: cleanName,
-          code: cleanCode,
-          description: data.description?.trim() || null,
-        },
-      });
-    } else {
-      // Check duplicate
-      const existing = await prisma.department.findFirst({
-        where: {
-          OR: [{ name: cleanName }, { code: cleanCode }],
-        },
-      });
+    const json = await res.json().catch(() => null);
 
-      if (existing) {
-        return { success: false, error: 'A department with this Name or Code already exists.' };
-      }
-
-      await prisma.department.create({
-        data: {
-          name: cleanName,
-          code: cleanCode,
-          description: data.description?.trim() || null,
-        },
-      });
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.message || 'Failed to save department.' };
     }
 
     revalidatePath('/hr/departments');
@@ -103,27 +99,26 @@ export async function deleteDepartment(id: string) {
   }
 
   try {
-    const empCount = await prisma.employee.count({
-      where: { departmentId: id, isDeleted: false },
+    const res = await fetch(`${API_BASE}/departments/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
+      },
+      cache: 'no-store',
     });
 
-    if (empCount > 0) {
-      return {
-        success: false,
-        error: `Cannot delete department. ${empCount} active employee(s) are assigned to it. Reassign them first.`,
-      };
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.message || 'Failed to delete department.' };
     }
-
-    await prisma.department.update({
-      where: { id },
-      data: { isDeleted: true },
-    });
 
     revalidatePath('/hr/departments');
     revalidatePath('/hr/course');
     revalidatePath('/hr/employees');
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: 'Failed to delete department.' };
+    return { success: false, error: err.message || 'Failed to delete department.' };
   }
 }

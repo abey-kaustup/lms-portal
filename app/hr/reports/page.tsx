@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getHRDetailedReport, exportReportToExcel } from '@/actions/reports';
+import {
+  getHRDetailedReport,
+  exportReportToExcel,
+  sendOverdueReminder,
+  sendBulkOverdueReminders,
+} from '@/actions/reports';
 import { getDepartments } from '@/actions/department';
 import { useToast } from '@/components/ui/Toast';
 import { Badge, ProgressBar } from '@/components/ui/Badge';
@@ -18,12 +23,18 @@ import {
   FileSpreadsheet,
   Building2,
   Filter,
+  Send,
+  AlertTriangle,
+  BellRing,
+  Sparkles,
 } from 'lucide-react';
 
 export default function HRReportsPage() {
   const { showToast } = useToast();
 
   const [loading, setLoading] = useState(true);
+  const [sendingBulk, setSendingBulk] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const [reportRows, setReportRows] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -65,6 +76,45 @@ export default function HRReportsPage() {
     }
   };
 
+  const handleSendSingleReminder = async (row: any) => {
+    setSendingId(row.id);
+    try {
+      const res = await sendOverdueReminder(row.id);
+      if (res.success) {
+        showToast(res.message || `Reminder sent to ${row.name}`, 'success');
+        loadReport();
+      } else {
+        showToast(res.error || 'Failed to send reminder', 'error');
+      }
+    } catch (err: any) {
+      showToast('Error sending reminder', 'error');
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const handleSendBulkReminders = async () => {
+    setSendingBulk(true);
+    try {
+      const res = await sendBulkOverdueReminders();
+      if (res.success) {
+        showToast(
+          res.count > 0
+            ? `Automated reminders successfully sent to ${res.count} overdue employee(s)!`
+            : 'No overdue employees require reminders at this time.',
+          'success'
+        );
+        loadReport();
+      } else {
+        showToast(res.error || 'Failed to send bulk reminders', 'error');
+      }
+    } catch (err: any) {
+      showToast('Error executing automated reminder run', 'error');
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
   const filteredRows = reportRows.filter((row) => {
     const matchesSearch =
       search === '' ||
@@ -75,13 +125,15 @@ export default function HRReportsPage() {
     const matchesStatus =
       statusFilter === 'ALL' ||
       (statusFilter === 'COMPLETED' && row.isCompleted) ||
+      (statusFilter === 'OVERDUE' && row.isOverdue) ||
       (statusFilter === 'PENDING' && !row.isCompleted);
 
     return matchesSearch && matchesStatus;
   });
 
   const totalCertified = reportRows.filter((r) => r.isCompleted).length;
-  
+  const overdueCount = reportRows.filter((r) => r.isOverdue).length;
+
   const validScores = reportRows
     .map((r) => {
       if (typeof r.bestScoreNum === 'number' && r.bestScoreNum !== null && (r.hasAttempt || r.bestScoreNum > 0)) {
@@ -104,7 +156,7 @@ export default function HRReportsPage() {
       key: 'employeeId',
       header: 'Employee ID',
       render: (row) => (
-        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+        <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
           {row.employeeId}
         </span>
       ),
@@ -112,7 +164,12 @@ export default function HRReportsPage() {
     {
       key: 'name',
       header: 'Employee Name',
-      render: (row) => <span className="font-bold text-slate-900 dark:text-slate-100">{row.name}</span>,
+      render: (row) => (
+        <div>
+          <p className="font-bold text-slate-900">{row.name}</p>
+          <p className="text-[11px] text-slate-400 font-medium">Joined: {row.joiningDate}</p>
+        </div>
+      ),
     },
     {
       key: 'department',
@@ -126,36 +183,48 @@ export default function HRReportsPage() {
       render: (row) => <ProgressBar progress={row.progressPercent} size="sm" showLabel={true} color="emerald" />,
     },
     {
-      key: 'completedLessonsCount',
-      header: 'Lessons Completed',
+      key: 'complianceStatus',
+      header: '7-Day Deadline Status',
       align: 'center',
-      render: (row) => (
-        <span className="font-semibold text-slate-700 dark:text-slate-300">
-          {row.completedLessonsCount} / {row.totalLessons}
-        </span>
-      ),
-    },
-    {
-      key: 'attemptsCount',
-      header: 'Attempts',
-      align: 'center',
-      render: (row) => <span className="font-bold text-slate-800 dark:text-slate-200">{row.attemptsCount}</span>,
+      render: (row) => {
+        if (row.isCompleted) {
+          return <Badge variant="success">COMPLETED ✔</Badge>;
+        }
+        if (row.isOverdue) {
+          return <Badge variant="danger">OVERDUE ({row.overdueDays}d)</Badge>;
+        }
+        return <Badge variant="info">ON TRACK (7d)</Badge>;
+      },
     },
     {
       key: 'bestScore',
       header: 'Best Score',
       align: 'center',
-      render: (row) => <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">{row.bestScore}</span>,
+      render: (row) => <span className="font-bold text-blue-600 font-mono">{row.bestScore}</span>,
     },
     {
-      key: 'certificateStatus',
-      header: 'Status',
+      key: 'actions',
+      header: 'Automated Reminder',
       align: 'right',
-      render: (row) => (
-        <Badge variant={row.isCompleted ? 'purple' : 'warning'}>
-          {row.certificateStatus}
-        </Badge>
-      ),
+      render: (row) => {
+        if (row.isCompleted) {
+          return <span className="text-[11px] font-semibold text-emerald-600">Compliance Met</span>;
+        }
+
+        const isSending = sendingId === row.id;
+
+        return (
+          <Button
+            variant={row.isOverdue ? 'danger' : 'outline'}
+            size="sm"
+            icon={isSending ? Sparkles : BellRing}
+            loading={isSending}
+            onClick={() => handleSendSingleReminder(row)}
+          >
+            {row.isOverdue ? 'Send Overdue Alert' : 'Send Nudge'}
+          </Button>
+        );
+      },
     },
   ];
 
@@ -167,20 +236,60 @@ export default function HRReportsPage() {
     <div className="space-y-8">
       {/* Page Header */}
       <PageHeader
-        title="Compliance & Analytics Reports"
-        description="Detailed department-wise breakdown of employee completion rates, assessment scores, and attempt metrics."
-        breadcrumbs={[{ label: 'Compliance Reports' }]}
+        title="Compliance & Automated Overdue Reminders"
+        description="Monitor 7-day employee induction deadlines, track overdue compliance, and dispatch automated notification reminders."
+        breadcrumbs={[{ label: 'Compliance & Overdue Control' }]}
         primaryAction={
-          <Button variant="primary" icon={FileSpreadsheet} onClick={handleExportExcel}>
-            Export Excel Report
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="danger"
+              icon={BellRing}
+              loading={sendingBulk}
+              onClick={handleSendBulkReminders}
+            >
+              Send Automated Bulk Overdue Reminders ({overdueCount})
+            </Button>
+            <Button variant="outline" icon={FileSpreadsheet} onClick={handleExportExcel}>
+              Export Excel
+            </Button>
+          </div>
         }
         stats={[
-          { title: 'Total Evaluated', value: reportRows.length, subtitle: 'Corporate Enrolled Staff', icon: BarChart3, color: 'blue' },
-          { title: 'Certified Staff', value: totalCertified, subtitle: 'Passed Assessment', icon: CheckCircle2, color: 'emerald' },
-          { title: 'Avg Assessment Score', value: `${avgScore}%`, subtitle: 'Benchmark Average', icon: Award, color: 'purple' },
+          { title: 'Total Evaluated', value: reportRows.length, subtitle: 'Enrolled Employees', icon: BarChart3, color: 'blue' },
+          { title: 'Compliant & Certified', value: totalCertified, subtitle: 'Passed Within 7 Days', icon: CheckCircle2, color: 'emerald' },
+          { title: 'Overdue Induction', value: overdueCount, subtitle: 'Exceeded 7-Day Window', icon: AlertTriangle, color: 'amber' },
         ]}
       />
+
+      {/* Overdue Notification Banner Card */}
+      {overdueCount > 0 && (
+        <div className="p-5 bg-gradient-to-r from-rose-500/10 via-rose-50 to-rose-50/40 border-2 border-rose-200 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-rose-600 text-white rounded-2xl shrink-0 shadow-sm">
+              <AlertTriangle className="w-6 h-6 animate-bounce" />
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold text-rose-950 flex items-center gap-2">
+                <span>{overdueCount} Employee(s) Overdue for 7-Day Induction Completion</span>
+                <Badge variant="danger" className="text-[10px]">ACTION REQUIRED</Badge>
+              </h4>
+              <p className="text-xs text-rose-800 font-medium mt-0.5">
+                Corporate policy mandates 100% video and assessment completion within 7 days of onboarding.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            variant="danger"
+            size="md"
+            icon={Send}
+            loading={sendingBulk}
+            onClick={handleSendBulkReminders}
+          >
+            Dispatch Overdue Reminders Now
+          </Button>
+        </div>
+      )}
 
       {/* Analytics Data Table */}
       <DataTable
@@ -230,6 +339,7 @@ export default function HRReportsPage() {
                 className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none"
               >
                 <option value="ALL">All Employees</option>
+                <option value="OVERDUE">Overdue Only (7+ Days)</option>
                 <option value="COMPLETED">Completed & Certified</option>
                 <option value="PENDING">Pending Induction</option>
               </select>

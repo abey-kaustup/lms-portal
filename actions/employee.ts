@@ -1,10 +1,11 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { validateEmployeeData } from '@/lib/validation';
 import { revalidatePath } from 'next/cache';
 import ExcelJS from 'exceljs';
-import { validateEmployeeData } from '@/lib/validation';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 
 export async function getEmployees({
   search = '',
@@ -24,17 +25,21 @@ export async function getEmployees({
     throw new Error('Unauthorized');
   }
 
-  // 1. Try fetching from ASP.NET Core Web API (MS SQL Server)
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
   try {
-    const query = new URLSearchParams();
-    if (search) query.append('search', search);
-    if (status && status !== 'ALL') query.append('status', status);
-    query.append('page', String(page));
-    query.append('pageSize', String(pageSize));
+    const url = new URL(`${API_BASE}/employees`);
+    if (search.trim()) url.searchParams.set('search', search.trim());
+    if (department && department !== 'ALL') {
+      if (!isNaN(parseInt(department, 10))) {
+        url.searchParams.set('departmentId', department);
+      }
+    }
+    if (status && status !== 'ALL') url.searchParams.set('status', status);
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('pageSize', String(pageSize));
 
-    const res = await fetch(`${API_BASE}/employees?${query.toString()}`, {
+    const res = await fetch(url.toString(), {
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${session.accessToken || ''}`,
       },
       cache: 'no-store',
@@ -42,99 +47,67 @@ export async function getEmployees({
 
     if (res.ok) {
       const result = await res.json();
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-        const formattedEmployees = result.data.map((e: any) => ({
-          id: e.id,
-          employeeId: e.employeeCode,
-          firstName: e.firstName,
-          middleName: e.middleName,
-          lastName: e.lastName,
-          email: e.officialEmail,
-          department: e.department?.departmentName || 'Information Technology',
-          departmentId: e.departmentId,
-          designation: e.designation?.title || 'Team Lead',
-          office: e.office?.officeName || 'Corporate HQ',
-          joiningDate: new Date(e.joiningDate),
-          status: e.employmentStatus || 'ACTIVE',
-          isMasterTester: e.isMasterTester || false,
-          certificates: [],
-          assessmentAttempts: [],
-          lessonProgresses: [],
-        }));
+      const rawList = result.data || result.employees || [];
 
-        return {
-          employees: formattedEmployees,
-          total: result.totalRecords || formattedEmployees.length,
-          totalPages: result.totalPages || 1,
-          page: result.page || 1,
-          departments: ['Information Technology', 'Human Resources', 'Finance & Accounts', 'Operations', 'Sales & Marketing', 'Legal & Compliance'],
-          departmentItems: [],
-        };
+      const formattedEmployees = rawList.map((emp: any) => ({
+        id: String(emp.id),
+        employeeId: emp.employeeCode || emp.employeeId,
+        firstName: emp.firstName,
+        middleName: emp.middleName,
+        lastName: emp.lastName,
+        name: `${emp.firstName} ${emp.lastName}`.trim(),
+        email: emp.officialEmail || emp.email,
+        department: emp.department?.departmentName || emp.departmentName || emp.department || 'Corporate',
+        departmentId: emp.departmentId ? String(emp.departmentId) : null,
+        designation: emp.designation?.title || emp.designationTitle || emp.designation || 'Staff',
+        office: emp.office?.officeName || emp.officeName || emp.office || 'Corporate HQ',
+        joiningDate: emp.joiningDate ? new Date(emp.joiningDate) : new Date(),
+        status: emp.employmentStatus || emp.status || 'ACTIVE',
+        isMasterTester: Boolean(emp.isMasterTester),
+        certificates: [],
+        assessmentAttempts: [],
+        lessonProgresses: [],
+      }));
+
+      const deptsRes = await fetch(`${API_BASE}/departments`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken || ''}`,
+        },
+        cache: 'no-store',
+      }).catch(() => null);
+
+      let depts: string[] = ['Information Technology', 'Human Resources', 'Finance & Accounts', 'Operations', 'Sales & Marketing', 'Legal & Compliance'];
+      let deptItems: any[] = [];
+
+      if (deptsRes && deptsRes.ok) {
+        const dJson = await deptsRes.json();
+        if (dJson.data) {
+          deptItems = dJson.data;
+          depts = dJson.data.map((d: any) => d.departmentName || d.name);
+        }
       }
+
+      return {
+        employees: formattedEmployees,
+        total: result.totalRecords || formattedEmployees.length,
+        totalPages: result.totalPages || 1,
+        page: result.page || page,
+        departments: depts,
+        departmentItems: deptItems,
+      };
     }
   } catch (err) {
-    console.warn('[getEmployees] API fetch warning, using local query fallback:', err);
+    console.error('[getEmployees] API fetch error:', err);
   }
-
-  // 2. Fallback to Prisma SQLite
-  const where: any = {
-    isDeleted: false,
-  };
-
-  if (search.trim()) {
-    const q = search.trim();
-    where.OR = [
-      { employeeId: { contains: q } },
-      { firstName: { contains: q } },
-      { lastName: { contains: q } },
-      { email: { contains: q } },
-      { designation: { contains: q } },
-      { office: { contains: q } },
-    ];
-  }
-
-  if (department && department !== 'ALL') {
-    where.OR = [
-      { departmentId: department },
-      { department: department },
-    ];
-  }
-
-  if (status && status !== 'ALL') {
-    where.status = status;
-  }
-
-  const total = await prisma.employee.count({ where }).catch(() => 0);
-  const employees = await prisma.employee.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    skip: (page - 1) * pageSize,
-    take: pageSize,
-    include: {
-      departmentRel: true,
-      lessonProgresses: {
-        where: { isCompleted: true },
-      },
-      assessmentAttempts: {
-        orderBy: { score: 'desc' },
-        take: 1,
-      },
-      certificates: true,
-    },
-  }).catch(() => []);
-
-  const activeDepartments = await prisma.department.findMany({
-    where: { isDeleted: false },
-    orderBy: { name: 'asc' },
-  }).catch(() => []);
 
   return {
-    employees,
-    total,
-    totalPages: Math.ceil(total / pageSize) || 1,
+    employees: [],
+    total: 0,
+    totalPages: 1,
     page,
-    departments: activeDepartments.map((d) => d.name),
-    departmentItems: activeDepartments,
+    departments: ['Information Technology', 'Human Resources', 'Finance & Accounts', 'Operations', 'Sales & Marketing', 'Legal & Compliance'],
+    departmentItems: [],
   };
 }
 
@@ -144,25 +117,22 @@ export async function getEmployeeById(id: string) {
     throw new Error('Unauthorized');
   }
 
-  const employee = await prisma.employee.findUnique({
-    where: { id },
-    include: {
-      departmentRel: true,
-      lessonProgresses: {
-        include: { lesson: true },
+  try {
+    const res = await fetch(`${API_BASE}/employees/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
       },
-      assessmentAttempts: {
-        orderBy: { submittedAt: 'desc' },
-      },
-      certificates: true,
-      activityLogs: {
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      },
-    },
-  });
+      cache: 'no-store',
+    });
 
-  return employee;
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    console.error('[getEmployeeById] API error:', err);
+    return null;
+  }
 }
 
 export async function saveEmployee(data: {
@@ -201,16 +171,14 @@ export async function saveEmployee(data: {
     const joiningDate = new Date(data.joiningDate);
     const cleanEmpId = data.employeeId.trim().toUpperCase();
 
-    // 1. Save to ASP.NET Core REST API (MS SQL Server)
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
     const apiPayload = {
-      id: data.id && !isNaN(parseInt(data.id)) ? parseInt(data.id) : null,
+      id: data.id && !isNaN(parseInt(data.id, 10)) ? parseInt(data.id, 10) : null,
       employeeCode: cleanEmpId,
       firstName: data.firstName.trim(),
       middleName: data.middleName?.trim() || null,
       lastName: data.lastName.trim(),
       officialEmail: data.email.trim(),
-      departmentId: data.departmentId && !isNaN(parseInt(data.departmentId)) ? parseInt(data.departmentId) : 1,
+      departmentId: data.departmentId && !isNaN(parseInt(data.departmentId, 10)) ? parseInt(data.departmentId, 10) : 1,
       designationId: 1,
       officeId: 1,
       joiningDate: joiningDate.toISOString(),
@@ -218,76 +186,22 @@ export async function saveEmployee(data: {
       isMasterTester: cleanEmpId === 'EMP7777',
     };
 
-      const apiRes = await fetch(`${API_BASE}/employees`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken || ''}`,
-        },
-        body: JSON.stringify(apiPayload),
-      });
+    const apiRes = await fetch(`${API_BASE}/employees`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
+      },
+      body: JSON.stringify(apiPayload),
+      cache: 'no-store',
+    });
 
-      const apiResult = await apiRes.json().catch(() => null);
-      if (!apiRes.ok) {
-        return {
-          success: false,
-          error: apiResult?.message || 'Employee Code or Email already exists.',
-        };
-      }
-
-    // 2. Also save in Prisma SQLite as local sync
-    let targetDeptId = data.departmentId || null;
-    let targetDeptName = data.department.trim();
-
-    if (targetDeptId) {
-      const deptObj = await prisma.department.findUnique({ where: { id: targetDeptId } }).catch(() => null);
-      if (deptObj) targetDeptName = deptObj.name;
-    } else if (targetDeptName) {
-      const deptObj = await prisma.department.findFirst({
-        where: {
-          isDeleted: false,
-          OR: [{ name: targetDeptName }, { code: targetDeptName.toUpperCase() }],
-        },
-      }).catch(() => null);
-      if (deptObj) {
-        targetDeptId = deptObj.id;
-        targetDeptName = deptObj.name;
-      }
-    }
-
-    if (data.id) {
-      await prisma.employee.update({
-        where: { id: data.id },
-        data: {
-          employeeId: cleanEmpId,
-          firstName: data.firstName.trim(),
-          middleName: data.middleName?.trim() || null,
-          lastName: data.lastName.trim(),
-          email: data.email.trim(),
-          department: targetDeptName,
-          departmentId: targetDeptId,
-          designation: data.designation.trim(),
-          office: data.office.trim(),
-          joiningDate,
-          status: data.status,
-        },
-      }).catch(() => null);
-    } else {
-      await prisma.employee.create({
-        data: {
-          employeeId: cleanEmpId,
-          firstName: data.firstName.trim(),
-          middleName: data.middleName?.trim() || null,
-          lastName: data.lastName.trim(),
-          email: data.email.trim(),
-          department: targetDeptName,
-          departmentId: targetDeptId,
-          designation: data.designation.trim(),
-          office: data.office.trim(),
-          joiningDate,
-          status: data.status || 'ACTIVE',
-        },
-      }).catch(() => null);
+    const apiResult = await apiRes.json().catch(() => null);
+    if (!apiRes.ok || !apiResult?.success) {
+      return {
+        success: false,
+        error: apiResult?.message || 'Failed to save employee record.',
+      };
     }
 
     revalidatePath('/hr/employees');
@@ -304,14 +218,24 @@ export async function deleteEmployee(id: string) {
   }
 
   try {
-    await prisma.employee.update({
-      where: { id },
-      data: { isDeleted: true },
+    const res = await fetch(`${API_BASE}/employees/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
+      },
+      cache: 'no-store',
     });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.message || 'Failed to delete employee.' };
+    }
+
     revalidatePath('/hr/employees');
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: 'Failed to delete employee.' };
+    return { success: false, error: err.message || 'Failed to delete employee.' };
   }
 }
 
@@ -321,17 +245,7 @@ export async function exportEmployeesToExcel() {
     throw new Error('Unauthorized');
   }
 
-  const employees = await prisma.employee.findMany({
-    where: { isDeleted: false },
-    orderBy: { employeeId: 'asc' },
-    include: {
-      certificates: true,
-      assessmentAttempts: {
-        where: { passed: true },
-        take: 1,
-      },
-    },
-  });
+  const { employees } = await getEmployees({ pageSize: 1000 });
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Employees');
@@ -347,11 +261,8 @@ export async function exportEmployeesToExcel() {
     { header: 'Office Location', key: 'office', width: 20 },
     { header: 'Joining Date', key: 'joiningDate', width: 15 },
     { header: 'Status', key: 'status', width: 12 },
-    { header: 'Assessment Score (%)', key: 'score', width: 20 },
-    { header: 'Certificate Status', key: 'certificateStatus', width: 20 },
   ];
 
-  // Header styling
   sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
   sheet.getRow(1).fill = {
     type: 'pattern',
@@ -359,10 +270,7 @@ export async function exportEmployeesToExcel() {
     fgColor: { argb: '0F172A' },
   };
 
-  employees.forEach((emp) => {
-    const topScore = emp.assessmentAttempts[0]?.score ?? 'N/A';
-    const certStatus = emp.certificates.length > 0 ? 'Issued' : 'Pending';
-
+  employees.forEach((emp: any) => {
     sheet.addRow({
       employeeId: emp.employeeId,
       firstName: emp.firstName,
@@ -372,10 +280,8 @@ export async function exportEmployeesToExcel() {
       department: emp.department,
       designation: emp.designation,
       office: emp.office,
-      joiningDate: emp.joiningDate.toISOString().split('T')[0],
+      joiningDate: emp.joiningDate ? new Date(emp.joiningDate).toISOString().split('T')[0] : '',
       status: emp.status,
-      score: topScore,
-      certificateStatus: certStatus,
     });
   });
 
@@ -403,7 +309,6 @@ export async function importEmployeesFromExcel(base64Content: string) {
     let updatedCount = 0;
     const errors: string[] = [];
 
-    // Skip header row
     for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber++) {
       const row = sheet.getRow(rowNumber);
       const empId = row.getCell(1).text.trim().toUpperCase();
@@ -418,66 +323,29 @@ export async function importEmployeesFromExcel(base64Content: string) {
       const statusText = row.getCell(10).text.trim().toUpperCase() || 'ACTIVE';
 
       if (!empId || !firstName || !lastName || !email) {
-        errors.push(`Row ${rowNumber}: Required fields (Employee ID, First Name, Last Name, Email) missing.`);
+        errors.push(`Row ${rowNumber}: Required fields missing.`);
         continue;
       }
 
-      const joiningDate = joiningDateText ? new Date(joiningDateText) : new Date();
+      const joiningDate = joiningDateText ? new Date(joiningDateText).toISOString() : new Date().toISOString();
 
-      const validation = validateEmployeeData({
+      const saveRes = await saveEmployee({
+        employeeId: empId,
         firstName,
         middleName,
         lastName,
         email,
         department: department || 'General',
+        designation: designation || 'Staff',
+        office: office || 'Corporate HQ',
         joiningDate,
+        status: statusText,
       });
 
-      if (!validation.isValid) {
-        errors.push(`Row ${rowNumber} (${empId}): ${validation.error}`);
-        continue;
-      }
-
-      try {
-        const existing = await prisma.employee.findUnique({
-          where: { employeeId: empId },
-        });
-
-        if (existing) {
-          await prisma.employee.update({
-            where: { id: existing.id },
-            data: {
-              firstName,
-              middleName: middleName || null,
-              lastName,
-              email,
-              department: department || existing.department,
-              designation: designation || existing.designation,
-              office: office || existing.office,
-              joiningDate,
-              status: statusText === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
-            },
-          });
-          updatedCount++;
-        } else {
-          await prisma.employee.create({
-            data: {
-              employeeId: empId,
-              firstName,
-              middleName: middleName || null,
-              lastName,
-              email,
-              department: department || 'General',
-              designation: designation || 'Staff',
-              office: office || 'Corporate HQ',
-              joiningDate,
-              status: statusText === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
-            },
-          });
-          createdCount++;
-        }
-      } catch (err: any) {
-        errors.push(`Row ${rowNumber} (${empId}): ${err.message}`);
+      if (saveRes.success) {
+        createdCount++;
+      } else {
+        errors.push(`Row ${rowNumber} (${empId}): ${saveRes.error}`);
       }
     }
 
@@ -515,7 +383,6 @@ export async function generateEmployeeImportTemplate() {
     { header: 'Status', key: 'status', width: 12 },
   ];
 
-  // Header styling
   const headerRow = sheet.getRow(1);
   headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
   headerRow.fill = {
@@ -526,7 +393,6 @@ export async function generateEmployeeImportTemplate() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Add sample rows to guide user on format
   sheet.addRow({
     employeeId: 'EMP1010',
     firstName: 'Sarah',
@@ -536,19 +402,6 @@ export async function generateEmployeeImportTemplate() {
     department: 'Engineering',
     designation: 'Software Engineer',
     office: 'Corporate HQ',
-    joiningDate: todayStr,
-    status: 'ACTIVE',
-  });
-
-  sheet.addRow({
-    employeeId: 'EMP1011',
-    firstName: 'Michael',
-    middleName: '',
-    lastName: 'Scott',
-    email: 'michael.scott@corporate.com',
-    department: 'Human Resources',
-    designation: 'HR Specialist',
-    office: 'Scranton Branch',
     joiningDate: todayStr,
     status: 'ACTIVE',
   });

@@ -22,6 +22,7 @@ export interface EnterpriseVideoPlayerProps {
   videoUrl: string;
   initialWatchedSeconds?: number;
   minDurationSeconds?: number;
+  seekToTime?: number;
   onProgressUpdate: (watchedSeconds: number, totalSeconds: number, isCompleted: boolean) => void;
   onComplete: () => void;
   isCompleted?: boolean;
@@ -31,6 +32,7 @@ export function EnterpriseVideoPlayer({
   videoUrl,
   initialWatchedSeconds = 0,
   minDurationSeconds = 0,
+  seekToTime,
   onProgressUpdate,
   onComplete,
   isCompleted = false,
@@ -49,6 +51,16 @@ export function EnterpriseVideoPlayer({
 
   // Playback engine modes: 'iframe' | 'native' | 'fallback'
   const [playerMode, setPlayerMode] = useState<'iframe' | 'native' | 'fallback'>('iframe');
+
+  useEffect(() => {
+    if (typeof seekToTime === 'number' && seekToTime >= 0) {
+      if (videoRef.current) {
+        const targetTime = completed ? seekToTime : Math.min(seekToTime, maxWatchedTime);
+        videoRef.current.currentTime = targetTime;
+        setCurrentTime(targetTime);
+      }
+    }
+  }, [seekToTime, completed, maxWatchedTime]);
 
   useEffect(() => {
     const info = detectVideoProvider(videoUrl);
@@ -138,10 +150,11 @@ export function EnterpriseVideoPlayer({
       setMaxWatchedTime(cur);
     }
 
-    // Completion calculation
+    // Completion calculation (90% Watch Duration Threshold)
     if (!completed && duration > 0) {
       const watchedPercent = maxWatchedTime / duration;
-      if (watchedPercent >= 0.95 || (minDurationSeconds > 0 && maxWatchedTime >= minDurationSeconds)) {
+      const minRequiredSeconds = minDurationSeconds > 0 ? minDurationSeconds * 0.9 : duration * 0.9;
+      if (watchedPercent >= 0.90 || maxWatchedTime >= minRequiredSeconds) {
         setCompleted(true);
         onComplete();
       }
@@ -152,7 +165,7 @@ export function EnterpriseVideoPlayer({
   useEffect(() => {
     const interval = setInterval(() => {
       if (duration > 0) {
-        const isFullyWatched = completed || maxWatchedTime / duration >= 0.95;
+        const isFullyWatched = completed || maxWatchedTime / duration >= 0.90;
         onProgressUpdate(maxWatchedTime, duration, isFullyWatched);
       }
     }, 10000);
@@ -294,12 +307,11 @@ export function EnterpriseVideoPlayer({
               onClick={() => {
                 setCompleted(true);
                 onComplete();
-                onProgressUpdate(100, 100, true);
               }}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-95 cursor-pointer"
             >
               <CheckCircle className="w-3.5 h-3.5" />
-              <span>{completed ? 'Completed' : 'Mark Complete'}</span>
+              <span>{completed ? 'Lesson Completed ✔' : 'Mark Complete'}</span>
             </button>
           </div>
         </div>
@@ -323,9 +335,9 @@ export function EnterpriseVideoPlayer({
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={handleTimeUpdate}
           onError={() => {
-            console.error('[ENTERPRISE_VIDEO_PLAYER_DEBUG] HTML5 video stream load error. Switching to fallback view.');
+            console.warn('[ENTERPRISE_VIDEO_PLAYER_INFO] HTML5 video stream load restricted. Switching to embedded player.');
             setIsLoading(false);
-            setPlayerMode('fallback');
+            setPlayerMode('iframe');
           }}
           onEnded={() => {
             setIsPlaying(false);

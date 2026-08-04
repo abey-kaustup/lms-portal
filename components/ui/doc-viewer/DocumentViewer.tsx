@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { detectFileMetadata, FileCategory } from '@/lib/document-utils';
-import { DocumentToolbar } from './DocumentToolbar';
+import { DocumentHeader, DocumentBottomBar } from './DocumentToolbar';
 import { PowerPointViewer } from './PowerPointViewer';
 import { WordViewer } from './WordViewer';
 import { ExcelViewer } from './ExcelViewer';
@@ -111,16 +111,25 @@ export function DocumentViewer({
   return (
     <div
       ref={containerRef}
-      className={`w-full bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm transition-all ${
+      className={`w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all ${
         isFullscreen ? 'fixed inset-0 z-50 rounded-none border-none h-screen w-screen flex flex-col' : ''
       }`}
     >
-      {/* Header Toolbar */}
-      <DocumentToolbar
+      {/* Top Header */}
+      <DocumentHeader
         title={title}
-        fileUrl={fileUrl}
         category={meta.category}
         categoryLabel={meta.label}
+      />
+
+      {/* Main Content Viewer Area */}
+      <div className={`w-full flex-1 relative ${isFullscreen ? 'h-full overflow-hidden' : ''}`}>
+        {renderSubViewer()}
+      </div>
+
+      {/* Bottom Control Bar with static Mark Completed button */}
+      <DocumentBottomBar
+        fileUrl={fileUrl}
         isCompleted={completed}
         isFullscreen={isFullscreen}
         onMarkCompleted={handleMarkCompleted}
@@ -128,11 +137,6 @@ export function DocumentViewer({
         onRetryPreview={handleRetryPreview}
         showRetry={meta.category !== 'image'}
       />
-
-      {/* Main Content Viewer Area */}
-      <div className={`w-full flex-1 relative ${isFullscreen ? 'h-full overflow-hidden' : ''}`}>
-        {renderSubViewer()}
-      </div>
     </div>
   );
 }

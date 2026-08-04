@@ -40,10 +40,10 @@ export default async function HREmployeeProfilePage({ params }: { params: Promis
     day: 'numeric',
   });
 
-  const completedLessons = employee.lessonProgresses.filter((p) => p.isCompleted);
-  const bestAttempt = employee.assessmentAttempts.reduce(
-    (best, curr) => (!best || curr.score > best.score ? curr : best),
-    null as (typeof employee.assessmentAttempts)[0] | null
+  const completedLessons = (employee.lessonProgresses || []).filter((p: any) => p.isCompleted);
+  const bestAttempt = (employee.assessmentAttempts || []).reduce(
+    (best: any, curr: any) => (!best || curr.score > best.score ? curr : best),
+    null
   );
 
   return (
@@ -169,7 +169,7 @@ export default async function HREmployeeProfilePage({ params }: { params: Promis
                 <p className="text-xs text-slate-400 italic">No assessment attempts recorded yet.</p>
               ) : (
                 <div className="divide-y divide-slate-100 text-xs">
-                  {employee.assessmentAttempts.map((attempt) => (
+                  {(employee.assessmentAttempts || []).map((attempt: any) => (
                     <div key={attempt.id} className="py-2.5 flex items-center justify-between">
                       <div>
                         <span className="font-bold text-slate-900">{attempt.score}%</span>
@@ -200,7 +200,7 @@ export default async function HREmployeeProfilePage({ params }: { params: Promis
             </h3>
 
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1 text-xs">
-              {employee.activityLogs.map((log) => (
+              {(employee.activityLogs || []).map((log: any) => (
                 <div key={log.id} className="p-2.5 bg-slate-50 rounded-xl flex items-center justify-between gap-4">
                   <div>
                     <span className="font-bold text-slate-900">{log.action}: </span>

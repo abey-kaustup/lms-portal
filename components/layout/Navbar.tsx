@@ -32,10 +32,8 @@ export function Navbar({ session }: NavbarProps) {
           </div>
         </div>
 
-        {/* Right Session info & Theme Switcher & Logout */}
+        {/* Right Session info & Logout */}
         <div className="flex items-center gap-4">
-          <ThemeSwitcher />
-          
           <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80">
             <div className="p-1.5 rounded-lg bg-slate-700 text-slate-300">
               {session.role === 'HR_ADMIN' ? (

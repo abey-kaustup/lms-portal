@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poppins.variable} h-full antialiased`}
+      className={`${poppins.variable} light h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -54,7 +54,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${poppins.className} min-h-full flex flex-col font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors`}>
+      <body className={`${poppins.className} min-h-full flex flex-col font-sans bg-slate-50 text-slate-900 transition-colors`}>
         <ThemeProvider>
           {children}
         </ThemeProvider>

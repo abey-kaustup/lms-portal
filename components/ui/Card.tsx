@@ -2,12 +2,13 @@ import React from 'react';
 
 interface CardProps {
   children: React.ReactNode;
+  id?: string;
   className?: string;
   hoverable?: boolean;
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
-export function Card({ children, className = '', hoverable = true, padding = 'md' }: CardProps) {
+export function Card({ children, id, className = '', hoverable = true, padding = 'md' }: CardProps) {
   const paddingStyles = {
     none: 'p-0',
     sm: 'p-3',
@@ -21,6 +22,7 @@ export function Card({ children, className = '', hoverable = true, padding = 'md
 
   return (
     <div
+      id={id}
       className={`apple-card ${paddingStyles} ${hoverStyles} transition-all duration-200 ${className}`}
     >
       {children}

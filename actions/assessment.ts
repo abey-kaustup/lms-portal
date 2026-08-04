@@ -1,9 +1,9 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-import { issueCertificate } from '@/actions/certificate';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 
 export async function getAssessmentQuestions(courseId: string) {
   const session = await getSession();
@@ -11,65 +11,27 @@ export async function getAssessmentQuestions(courseId: string) {
     throw new Error('Unauthorized');
   }
 
-  const rawQuestions = await prisma.assessmentQuestion.findMany({
-    where: { courseId, isDeleted: false },
-    orderBy: { sortOrder: 'asc' },
-    include: {
-      module: {
-        include: { department: true },
+  try {
+    const res = await fetch(`${API_BASE}/assessments/questions/${courseId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
       },
-    },
-  });
+      cache: 'no-store',
+    });
 
-  // HR gets all questions for course architecture management
-  if (session.role === 'HR_ADMIN') {
-    return rawQuestions.map((q) => ({
-      id: q.id,
-      moduleId: q.moduleId,
-      moduleTitle: q.module?.title,
-      moduleType: q.module?.moduleType || 'COMMON',
-      departmentName: q.module?.department?.name || 'Common',
-      questionText: q.questionText,
-      options: JSON.parse(q.optionsJSON) as string[],
-      correctOptionIndex: q.correctOptionIndex,
-      explanation: q.explanation,
-      points: q.points,
-      sortOrder: q.sortOrder,
-    }));
+    if (!res.ok) return [];
+    const json = await res.json();
+    const questions = json.data || [];
+    (questions as any).isCooldownActive = Boolean(json.isCooldownActive);
+    (questions as any).cooldownExpiresAt = json.cooldownExpiresAt;
+    (questions as any).cooldownRemainingMinutes = json.cooldownRemainingMinutes || 0;
+    (questions as any).lastAttemptScore = json.lastAttemptScore;
+    return questions;
+  } catch (err) {
+    console.error('[getAssessmentQuestions] API error:', err);
+    return [];
   }
-
-  // Employee: Filter questions by employee's assigned department
-  const employee = await prisma.employee.findUnique({
-    where: { id: session.id },
-    include: { departmentRel: true },
-  });
-
-  const empDeptId = employee?.departmentId;
-  const empDeptName = employee?.department;
-
-  const filteredQuestions = rawQuestions.filter((q) => {
-    // If not linked to a module or module is COMMON -> include
-    if (!q.module || q.module.moduleType === 'COMMON') return true;
-
-    // If module is DEPARTMENT -> only include if matching employee department
-    if (q.module.moduleType === 'DEPARTMENT') {
-      if (empDeptId && q.module.departmentId === empDeptId) return true;
-      if (q.module.department?.name && empDeptName && q.module.department.name.toLowerCase() === empDeptName.toLowerCase()) return true;
-      if (q.module.department?.code && empDeptName && q.module.department.code.toLowerCase() === empDeptName.toLowerCase()) return true;
-      return false;
-    }
-
-    return false;
-  });
-
-  return filteredQuestions.map((q) => ({
-    id: q.id,
-    moduleId: q.moduleId,
-    questionText: q.questionText,
-    options: JSON.parse(q.optionsJSON) as string[],
-    points: q.points,
-    sortOrder: q.sortOrder,
-  }));
 }
 
 export async function saveAssessmentQuestion(data: {
@@ -88,35 +50,30 @@ export async function saveAssessmentQuestion(data: {
   }
 
   try {
-    const optionsJSON = JSON.stringify(data.options);
-    const moduleId = data.moduleId || null;
+    const payload = {
+      id: data.id ? parseInt(data.id, 10) : null,
+      courseId: parseInt(data.courseId, 10),
+      moduleId: data.moduleId ? parseInt(data.moduleId, 10) : null,
+      questionText: data.questionText.trim(),
+      options: data.options,
+      correctOptionIndex: data.correctOptionIndex,
+      explanation: data.explanation?.trim() || null,
+      points: data.points || 1.0,
+    };
 
-    if (data.id) {
-      await prisma.assessmentQuestion.update({
-        where: { id: data.id },
-        data: {
-          questionText: data.questionText.trim(),
-          moduleId,
-          optionsJSON,
-          correctOptionIndex: data.correctOptionIndex,
-          explanation: data.explanation?.trim() || null,
-          points: data.points ?? 1.0,
-        },
-      });
-    } else {
-      const count = await prisma.assessmentQuestion.count({ where: { courseId: data.courseId } });
-      await prisma.assessmentQuestion.create({
-        data: {
-          courseId: data.courseId,
-          moduleId,
-          questionText: data.questionText.trim(),
-          optionsJSON,
-          correctOptionIndex: data.correctOptionIndex,
-          explanation: data.explanation?.trim() || null,
-          points: data.points ?? 1.0,
-          sortOrder: count + 1,
-        },
-      });
+    const res = await fetch(`${API_BASE}/assessments/questions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.message || 'Failed to save question.' };
     }
 
     revalidatePath('/hr/course');
@@ -134,22 +91,31 @@ export async function deleteAssessmentQuestion(id: string) {
   }
 
   try {
-    await prisma.assessmentQuestion.update({
-      where: { id },
-      data: { isDeleted: true },
+    const res = await fetch(`${API_BASE}/assessments/questions/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
+      },
+      cache: 'no-store',
     });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.message || 'Failed to delete question.' };
+    }
 
     revalidatePath('/hr/course');
     revalidatePath('/employee/assessment');
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: 'Failed to delete question.' };
+    return { success: false, error: err.message || 'Failed to delete question.' };
   }
 }
 
-export async function submitAssessment(data: {
+export async function submitAssessmentAttempt(data: {
   courseId: string;
-  answers: Record<string, number>; // { [questionId]: selectedIndex }
+  answers: Record<string, number>;
   timeTakenSeconds: number;
 }) {
   const session = await getSession();
@@ -157,88 +123,41 @@ export async function submitAssessment(data: {
     return { success: false, error: 'Unauthorized' };
   }
 
-  const course = await prisma.course.findUnique({
-    where: { id: data.courseId },
-  });
+  try {
+    const intAnswers: Record<number, number> = {};
+    Object.entries(data.answers).forEach(([k, v]) => {
+      intAnswers[parseInt(k, 10)] = v;
+    });
 
-  if (!course) {
-    return { success: false, error: 'Course not found' };
-  }
-
-  // Get questions filtered for employee department
-  const questions = await getAssessmentQuestions(data.courseId);
-
-  if (questions.length === 0) {
-    return { success: false, error: 'No assessment questions configured for your department.' };
-  }
-
-  // Verify all questions belong to DB
-  const dbQuestions = await prisma.assessmentQuestion.findMany({
-    where: {
-      id: { in: questions.map((q) => q.id) },
-      isDeleted: false,
-    },
-  });
-
-  let totalPoints = 0;
-  let earnedPoints = 0;
-  let correctAnswersCount = 0;
-
-  dbQuestions.forEach((q) => {
-    totalPoints += q.points;
-    const selectedIdx = data.answers[q.id];
-    if (selectedIdx === q.correctOptionIndex) {
-      earnedPoints += q.points;
-      correctAnswersCount++;
-    }
-  });
-
-  const scorePercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100 * 10) / 10 : 0;
-  const passed = scorePercentage >= course.passingScore;
-
-  const attempt = await prisma.assessmentAttempt.create({
-    data: {
-      employeeId: session.id,
-      courseId: data.courseId,
-      score: scorePercentage,
-      passed,
-      totalQuestions: dbQuestions.length,
-      correctAnswers: correctAnswersCount,
+    const payload = {
+      courseId: parseInt(data.courseId, 10),
+      answers: intAnswers,
       timeTakenSeconds: data.timeTakenSeconds,
-      answersJSON: JSON.stringify(data.answers),
-    },
-  });
+    };
 
-  // Log activity
-  await prisma.activityLog.create({
-    data: {
-      userId: session.identifier,
-      employeeId: session.id,
-      role: 'EMPLOYEE',
-      action: 'ASSESSMENT_SUBMITTED',
-      details: `Submitted department assessment: Score ${scorePercentage}% (${passed ? 'PASSED' : 'FAILED'})`,
-    },
-  });
+    const res = await fetch(`${API_BASE}/assessments/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.accessToken || ''}`,
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    });
 
-  // If passed, issue certificate automatically
-  let certificate = null;
-  if (passed) {
-    certificate = await issueCertificate(session.id, data.courseId);
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      return { success: false, error: json?.message || 'Failed to submit attempt.' };
+    }
+
+    revalidatePath('/employee/learn');
+    revalidatePath('/employee/dashboard');
+    revalidatePath('/employee/certificate');
+    return json;
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to submit attempt.' };
   }
-
-  revalidatePath('/employee/dashboard');
-  revalidatePath('/employee/learn');
-  revalidatePath('/employee/assessment');
-  revalidatePath('/employee/certificate');
-
-  return {
-    success: true,
-    attempt,
-    scorePercentage,
-    passed,
-    passingScore: course.passingScore,
-    correctAnswersCount,
-    totalQuestions: dbQuestions.length,
-    certificate,
-  };
 }
+
+export const submitAssessment = submitAssessmentAttempt;
+

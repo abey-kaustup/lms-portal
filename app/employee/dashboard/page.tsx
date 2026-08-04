@@ -24,24 +24,32 @@ export default async function EmployeeDashboardPage() {
   const session = await getSession();
   const state = await getEmployeeLearningState();
 
+  if (!state) {
+    return (
+      <div className="p-8 text-center text-slate-500">
+        <p className="text-sm font-semibold">Unable to load learning state. Please refresh or contact HR.</p>
+      </div>
+    );
+  }
+
   const {
     employee,
     course,
-    commonModules,
-    departmentModules,
-    totalLessonsCount,
-    completedLessonsCount,
-    commonLessonsCount,
-    commonCompletedCount,
-    deptLessonsCount,
-    deptCompletedCount,
-    overallProgressPercentage,
-    allCommonCompleted,
-    allLessonsCompleted,
-    isAssessmentUnlocked,
-    isCourseFullyCompleted,
-    passedAttempt,
-    certificate,
+    commonModules = [],
+    departmentModules = [],
+    totalLessonsCount = 0,
+    completedLessonsCount = 0,
+    commonLessonsCount = 0,
+    commonCompletedCount = 0,
+    deptLessonsCount = 0,
+    deptCompletedCount = 0,
+    overallProgressPercentage = 0,
+    allCommonCompleted = false,
+    allLessonsCompleted = false,
+    isAssessmentUnlocked = false,
+    isCourseFullyCompleted = false,
+    passedAttempt = null,
+    certificate = null,
   } = state;
 
   const empDeptName = employee?.departmentRel?.name || session?.department || 'General';
@@ -76,6 +84,17 @@ export default async function EmployeeDashboardPage() {
               <span className="text-xs text-slate-400 font-medium">
                 Dept: <strong className="text-white font-bold">{empDeptName}</strong> | {session?.designation || 'Staff'}
               </span>
+              {employee?.isOverdue ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-500/30 text-red-200 text-[10px] font-extrabold border border-red-400/50 uppercase tracking-wider animate-pulse">
+                  <Clock className="w-3 h-3 text-red-400" />
+                  OVERDUE BY {employee.overdueDays || 1} DAY(S)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold border border-emerald-400/30 uppercase tracking-wider">
+                  <Clock className="w-3 h-3 text-emerald-400" />
+                  {employee?.daysRemaining !== undefined ? `${employee.daysRemaining} Days Left in 7-Day Window` : '7-Day Compliance Active'}
+                </span>
+              )}
               {state.isMasterTester && (
                 <span className="text-[9px] font-black bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded-md border border-purple-400/40 uppercase tracking-wider">
                   MASTER TEST

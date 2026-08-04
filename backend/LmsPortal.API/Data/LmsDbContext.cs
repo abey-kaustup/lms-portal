@@ -106,6 +106,15 @@ namespace LmsPortal.API.Data
                 }
             }
 
+            // Decimal Precision Configurations
+            modelBuilder.Entity<Assessment>().Property(a => a.PassingScorePercentage).HasColumnType("decimal(5,2)");
+            modelBuilder.Entity<AssessmentAnswer>().Property(a => a.PointsAwarded).HasColumnType("decimal(5,2)");
+            modelBuilder.Entity<AssessmentAttempt>().Property(a => a.ScorePercentage).HasColumnType("decimal(5,2)");
+            modelBuilder.Entity<AssessmentQuestion>().Property(q => q.Points).HasColumnType("decimal(5,2)");
+            modelBuilder.Entity<Course>().Property(c => c.PassingScorePercentage).HasColumnType("decimal(5,2)");
+            modelBuilder.Entity<LessonProgress>().Property(lp => lp.TotalSeconds).HasColumnType("decimal(10,2)");
+            modelBuilder.Entity<LessonProgress>().Property(lp => lp.WatchedSeconds).HasColumnType("decimal(10,2)");
+
             // Global Soft Delete Filters
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
