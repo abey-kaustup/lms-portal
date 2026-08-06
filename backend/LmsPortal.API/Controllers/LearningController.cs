@@ -16,10 +16,12 @@ namespace LmsPortal.API.Controllers
     public class LearningController : ControllerBase
     {
         private readonly LmsDbContext _context;
+        private readonly LmsPortal.API.Services.IGamificationService _gamificationService;
 
-        public LearningController(LmsDbContext context)
+        public LearningController(LmsDbContext context, LmsPortal.API.Services.IGamificationService gamificationService)
         {
             _context = context;
+            _gamificationService = gamificationService;
         }
 
         public record SaveProgressDto(int LessonId, bool IsCompleted, decimal WatchedSeconds, decimal TotalSeconds);
@@ -256,6 +258,12 @@ namespace LmsPortal.API.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            if (isCompletedRequested)
+            {
+                await _gamificationService.TriggerLessonCompletionAsync(employee.Id, dto.LessonId);
+            }
+
             return Ok(new { success = true, data = progress });
         }
     }

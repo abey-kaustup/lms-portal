@@ -21,6 +21,8 @@ import {
   FileSpreadsheet,
   BookOpen,
 } from 'lucide-react';
+import { GamificationHighlightCards } from '@/components/dashboard/GamificationHighlightCards';
+import { HrLeaderboardView } from '@/components/hr/HrLeaderboardView';
 
 export default async function HRDashboardPage() {
   const stats = await getHRDashboardStats();
@@ -296,6 +298,16 @@ export default async function HRDashboardPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Gamification Top Performers Highlight Cards */}
+      <div className="pt-2">
+        <GamificationHighlightCards />
+      </div>
+
+      {/* Expanded HR Leaderboard Module */}
+      <div className="pt-2">
+        <HrLeaderboardView />
       </div>
     </div>
   );

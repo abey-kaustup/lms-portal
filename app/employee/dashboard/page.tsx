@@ -19,6 +19,8 @@ import {
   ShieldCheck,
   Lock,
 } from 'lucide-react';
+import { LeaderboardWidget } from '@/components/dashboard/LeaderboardWidget';
+import { GamificationProfileCard } from '@/components/dashboard/GamificationProfileCard';
 
 export default async function EmployeeDashboardPage() {
   const session = await getSession();
@@ -341,6 +343,16 @@ export default async function EmployeeDashboardPage() {
               </div>
             </div>
           </Card>
+        </div>
+      </div>
+
+      {/* Gamification Row: My Rank & Top 10 Leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 pt-2">
+        <div className="lg:col-span-1">
+          <GamificationProfileCard />
+        </div>
+        <div className="lg:col-span-2">
+          <LeaderboardWidget />
         </div>
       </div>
     </div>

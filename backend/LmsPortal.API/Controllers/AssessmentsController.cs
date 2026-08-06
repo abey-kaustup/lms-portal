@@ -16,10 +16,12 @@ namespace LmsPortal.API.Controllers
     public class AssessmentsController : ControllerBase
     {
         private readonly LmsDbContext _context;
+        private readonly LmsPortal.API.Services.IGamificationService _gamificationService;
 
-        public AssessmentsController(LmsDbContext context)
+        public AssessmentsController(LmsDbContext context, LmsPortal.API.Services.IGamificationService gamificationService)
         {
             _context = context;
+            _gamificationService = gamificationService;
         }
 
         public record UpsertQuestionDto(
@@ -332,8 +334,12 @@ namespace LmsPortal.API.Controllers
                     };
                     _context.Certificates.Add(cert);
                     await _context.SaveChangesAsync();
+
+                    await _gamificationService.TriggerCertificateGeneratedAsync(employee.Id, cert.Id);
                 }
             }
+
+            await _gamificationService.TriggerAssessmentSubmitAsync(employee.Id, assessment?.Id ?? 1, scorePercentage, passed);
 
             return Ok(new
             {

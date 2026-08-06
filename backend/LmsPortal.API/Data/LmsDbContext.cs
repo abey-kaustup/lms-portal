@@ -46,6 +46,12 @@ namespace LmsPortal.API.Data
         public DbSet<Certificate> Certificates => Set<Certificate>();
         public DbSet<CertificateVerificationLog> CertificateVerificationLogs => Set<CertificateVerificationLog>();
 
+        // Gamification & Leaderboard
+        public DbSet<EmployeeGamification> EmployeeGamifications => Set<EmployeeGamification>();
+        public DbSet<EmployeeAchievement> EmployeeAchievements => Set<EmployeeAchievement>();
+        public DbSet<LearningStreak> LearningStreaks => Set<LearningStreak>();
+        public DbSet<LeaderboardHistory> LeaderboardHistories => Set<LeaderboardHistory>();
+
         // Administration & Audit
         public DbSet<ApplicationSetting> ApplicationSettings => Set<ApplicationSetting>();
         public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
@@ -85,6 +91,11 @@ namespace LmsPortal.API.Data
 
             modelBuilder.Entity<Certificate>().ToTable("Certificates", "cert");
             modelBuilder.Entity<CertificateVerificationLog>().ToTable("CertificateVerificationLogs", "cert");
+
+            modelBuilder.Entity<EmployeeGamification>().ToTable("EmployeeGamification", "lms");
+            modelBuilder.Entity<EmployeeAchievement>().ToTable("EmployeeAchievements", "lms");
+            modelBuilder.Entity<LearningStreak>().ToTable("LearningStreaks", "lms");
+            modelBuilder.Entity<LeaderboardHistory>().ToTable("LeaderboardHistory", "lms");
 
             modelBuilder.Entity<ApplicationSetting>().ToTable("ApplicationSettings", "adm");
             modelBuilder.Entity<ActivityLog>().ToTable("ActivityLogs", "adm");

@@ -24,6 +24,9 @@ builder.Services.AddDbContext<LmsDbContext>(options =>
         sqlOptions => sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(30), errorNumbersToAdd: null)
     ));
 
+// Gamification Service Registration
+builder.Services.AddScoped<LmsPortal.API.Services.IGamificationService, LmsPortal.API.Services.GamificationService>();
+
 // 3. ASP.NET Core 10 JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? "SUPER_SECRET_ENTERPRISE_JWT_KEY_LMS_PORTAL_2026_PRODUCTION_MUST_BE_VERY_LONG!");
