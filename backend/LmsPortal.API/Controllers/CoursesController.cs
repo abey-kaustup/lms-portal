@@ -45,6 +45,7 @@ namespace LmsPortal.API.Controllers
         );
 
         [HttpGet("structure")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetCourseWithStructure()
         {
             var course = await _context.Courses
@@ -59,7 +60,22 @@ namespace LmsPortal.API.Controllers
 
             if (course == null)
             {
-                return Ok(new { success = true, data = (object?)null });
+                course = new Course
+                {
+                    CourseCode = "C0001",
+                    Title = "General Corporate Induction 2026",
+                    Description = "Mandatory Induction Course",
+                    PassingScorePercentage = 80.00m,
+                    IsPublished = true
+                };
+                _context.Courses.Add(course);
+                await _context.SaveChangesAsync();
+
+                // Re-query to get navigation properties initialized
+                course = await _context.Courses
+                    .Include(c => c.Modules)
+                    .Include(c => c.Assessments)
+                    .FirstAsync(c => c.Id == course.Id);
             }
 
             var result = new
@@ -69,43 +85,54 @@ namespace LmsPortal.API.Controllers
                 title = course.Title,
                 description = course.Description,
                 passingScore = course.PassingScorePercentage,
-                modules = course.Modules.OrderBy(m => m.SortOrder).Select(m => new
+                modules = course.Modules.Where(m => !m.IsDeleted).OrderBy(m => m.SortOrder).Select(m => new
                 {
                     id = m.Id.ToString(),
                     courseId = m.CourseId.ToString(),
+                    code = m.ModuleCode,
                     title = m.Title,
                     description = m.Description,
-                    moduleType = m.ModuleType,
-                    departmentId = m.TargetDepartmentId?.ToString(),
-                    department = m.TargetDepartment != null ? new
-                    {
-                        id = m.TargetDepartment.Id.ToString(),
-                        name = m.TargetDepartment.DepartmentName,
-                        code = m.TargetDepartment.DepartmentCode
-                    } : null,
+                    moduleType = string.Equals(m.ModuleType, "DEPARTMENT", StringComparison.OrdinalIgnoreCase) ? "DEPARTMENT" : "COMMON",
+                    targetDepartmentId = m.TargetDepartmentId,
+                    targetDepartmentName = m.TargetDepartment?.DepartmentName,
                     sortOrder = m.SortOrder,
-                    lessons = m.Lessons.OrderBy(l => l.SortOrder).Select(l => new
+                    lessons = m.Lessons.Where(l => !l.IsDeleted).OrderBy(l => l.SortOrder).Select(l => new
                     {
                         id = l.Id.ToString(),
                         moduleId = l.ModuleId.ToString(),
+                        code = l.LessonCode,
                         title = l.Title,
                         description = l.Description,
                         contentType = l.ContentType,
-                        videoUrl = l.Files.FirstOrDefault(f => f.FileType == "VIDEO")?.SharePointUrl,
-                        pdfUrl = l.Files.FirstOrDefault(f => f.FileType == "PDF")?.SharePointUrl,
+                        videoUrl = l.Files.FirstOrDefault(f => f.FileType == "VIDEO" && !f.IsDeleted)?.SharePointUrl,
+                        pdfUrl = l.Files.FirstOrDefault(f => f.FileType == "PDF" && !f.IsDeleted)?.SharePointUrl,
                         minDurationSeconds = l.MinDurationSeconds,
-                        sortOrder = l.SortOrder
+                        sortOrder = l.SortOrder,
+                        files = l.Files.Where(f => !f.IsDeleted).Select(f => new
+                        {
+                            id = f.Id.ToString(),
+                            fileName = f.FileName,
+                            fileUrl = f.SharePointUrl,
+                            fileType = f.FileType,
+                            fileSizeBytes = f.FileSizeByte
+                        })
                     })
                 }),
-                assessmentQuestions = course.Assessments.SelectMany(a => a.Questions).Select(q => new
+                assessment = course.Assessments.FirstOrDefault(a => !a.IsDeleted) == null ? null : new
                 {
-                    id = q.Id.ToString(),
-                    courseId = course.Id.ToString(),
-                    moduleId = q.ModuleId?.ToString(),
-                    questionText = q.QuestionText,
-                    points = q.Points,
-                    sortOrder = q.SortOrder
-                })
+                    id = course.Assessments.First(a => !a.IsDeleted).Id.ToString(),
+                    title = course.Assessments.First(a => !a.IsDeleted).Title,
+                    totalQuestions = course.Assessments.First(a => !a.IsDeleted).Questions.Count(q => !q.IsDeleted),
+                    passingPercentage = course.Assessments.First(a => !a.IsDeleted).PassingScorePercentage,
+                    timeLimitMinutes = course.Assessments.First(a => !a.IsDeleted).TimeLimitMinutes,
+                    questions = course.Assessments.First(a => !a.IsDeleted).Questions.Where(q => !q.IsDeleted).Select(q => new
+                    {
+                        id = q.Id.ToString(),
+                        questionText = q.QuestionText,
+                        points = q.Points,
+                        sortOrder = q.SortOrder
+                    })
+                }
             };
 
             return Ok(new { success = true, data = result });
@@ -124,13 +151,44 @@ namespace LmsPortal.API.Controllers
                 module = await _context.Modules.FirstOrDefaultAsync(m => m.Id == dto.Id.Value && !m.IsDeleted);
             }
 
+            int courseId = dto.CourseId;
+            var existingCourse = courseId > 0 
+                ? await _context.Courses.FirstOrDefaultAsync(c => c.Id == courseId && !c.IsDeleted) 
+                : null;
+
+            if (existingCourse == null)
+            {
+                existingCourse = await _context.Courses.FirstOrDefaultAsync(c => !c.IsDeleted);
+                if (existingCourse == null)
+                {
+                    existingCourse = new Course
+                    {
+                        CourseCode = "C0001",
+                        Title = "General Corporate Induction 2026",
+                        Description = "Mandatory Induction Course",
+                        PassingScorePercentage = 80.00m,
+                        IsPublished = true
+                    };
+                    _context.Courses.Add(existingCourse);
+                    await _context.SaveChangesAsync();
+                }
+                courseId = existingCourse.Id;
+            }
+
             if (module == null)
             {
-                var count = await _context.Modules.CountAsync(m => m.CourseId == dto.CourseId && !m.IsDeleted);
+                var count = await _context.Modules.CountAsync(m => m.CourseId == courseId && !m.IsDeleted);
+                var maxId = await _context.Modules.MaxAsync(m => (int?)m.Id) ?? 0;
+                int nextNum = maxId + 1;
+                while (await _context.Modules.AnyAsync(m => m.ModuleCode == $"M{nextNum:D4}"))
+                {
+                    nextNum++;
+                }
+
                 module = new Module
                 {
-                    CourseId = dto.CourseId,
-                    ModuleCode = $"M{count + 1:D4}",
+                    CourseId = courseId,
+                    ModuleCode = $"M{nextNum:D4}",
                     Title = dto.Title.Trim(),
                     Description = dto.Description?.Trim(),
                     ModuleType = dto.ModuleType ?? "COMMON",
@@ -184,10 +242,17 @@ namespace LmsPortal.API.Controllers
             if (lesson == null)
             {
                 var count = await _context.Lessons.CountAsync(l => l.ModuleId == dto.ModuleId && !l.IsDeleted);
+                var maxId = await _context.Lessons.MaxAsync(l => (int?)l.Id) ?? 0;
+                int nextNum = maxId + 1;
+                while (await _context.Lessons.AnyAsync(l => l.LessonCode == $"L{nextNum:D4}"))
+                {
+                    nextNum++;
+                }
+
                 lesson = new Lesson
                 {
                     ModuleId = dto.ModuleId,
-                    LessonCode = $"L{count + 1:D4}",
+                    LessonCode = $"L{nextNum:D4}",
                     Title = dto.Title.Trim(),
                     Description = dto.Description?.Trim(),
                     ContentType = dto.ContentType ?? "VIDEO",

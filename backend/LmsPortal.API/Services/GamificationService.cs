@@ -94,6 +94,12 @@ namespace LmsPortal.API.Services
                     );
                 END
 
+                IF OBJECT_ID('cert.Certificates', 'U') IS NOT NULL
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('cert.Certificates') AND name = 'GeneratedBy')
+                        EXEC('ALTER TABLE [cert].[Certificates] ADD [GeneratedBy] NVARCHAR(100) NOT NULL DEFAULT ''SYSTEM''');
+                END
+
                 IF OBJECT_ID('lms.LeaderboardHistory', 'U') IS NULL
                 BEGIN
                     CREATE TABLE lms.LeaderboardHistory (

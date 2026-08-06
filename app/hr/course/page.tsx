@@ -55,6 +55,7 @@ export default function HRCoursePage() {
   const [moduleDesc, setModuleDesc] = useState('');
   const [moduleType, setModuleType] = useState<'COMMON' | 'DEPARTMENT'>('COMMON');
   const [selectedDeptId, setSelectedDeptId] = useState('');
+  const [isSavingModule, setIsSavingModule] = useState(false);
 
   // Lesson Modal state
   const [lessonModalOpen, setLessonModalOpen] = useState(false);
@@ -65,6 +66,7 @@ export default function HRCoursePage() {
   const [contentType, setContentType] = useState<'VIDEO' | 'PDF' | 'VIDEO_PDF'>('VIDEO');
   const [videoUrl, setVideoUrl] = useState('');
   const [pdfUrl, setPdfUrl] = useState('');
+  const [isSavingLesson, setIsSavingLesson] = useState(false);
 
   // Question Modal state
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
@@ -121,46 +123,63 @@ export default function HRCoursePage() {
 
   const handleSaveModule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!course) return;
+    if (!moduleTitle.trim()) {
+      showToast('Module title is required', 'error');
+      return;
+    }
 
+    if (moduleType === 'DEPARTMENT' && !selectedDeptId) {
+      showToast('Please select a target department', 'error');
+      return;
+    }
+
+    setIsSavingModule(true);
     try {
-      if (moduleType === 'DEPARTMENT' && !selectedDeptId) {
-        showToast('Please select a target department', 'error');
-        return;
-      }
+      const targetCourseId = course?.id ? course.id.toString() : '1';
+      let res;
 
       if (editingModule) {
-        await updateModule({
+        res = await updateModule({
           id: editingModule.id,
           title: moduleTitle,
           description: moduleDesc,
           moduleType,
           departmentId: moduleType === 'DEPARTMENT' ? selectedDeptId : null,
         });
-        showToast('Module updated!', 'success');
       } else {
-        await createModule({
-          courseId: course.id,
+        res = await createModule({
+          courseId: targetCourseId,
           title: moduleTitle,
           description: moduleDesc,
           moduleType,
           departmentId: moduleType === 'DEPARTMENT' ? selectedDeptId : null,
         });
-        showToast('Module created!', 'success');
       }
-      setModuleModalOpen(false);
-      loadData();
+
+      if (res && res.success) {
+        showToast(editingModule ? 'Module updated successfully!' : 'Module created successfully!', 'success');
+        setModuleModalOpen(false);
+        await loadData();
+      } else {
+        showToast(res?.error || 'Failed to save module.', 'error');
+      }
     } catch (err: any) {
-      showToast('Failed to save module', 'error');
+      showToast(err.message || 'Failed to save module', 'error');
+    } finally {
+      setIsSavingModule(false);
     }
   };
 
   const handleDeleteModule = async (id: string, title: string) => {
     if (!window.confirm(`Delete module "${title}"?`)) return;
     try {
-      await deleteModule(id);
-      showToast('Module deleted', 'success');
-      loadData();
+      const res = await deleteModule(id);
+      if (res && res.success) {
+        showToast('Module deleted', 'success');
+        await loadData();
+      } else {
+        showToast(res?.error || 'Failed to delete module', 'error');
+      }
     } catch (err) {
       showToast('Failed to delete module', 'error');
     }
@@ -178,7 +197,7 @@ export default function HRCoursePage() {
 
     const ids = newMods.map((m) => m.id);
     await reorderModules(ids);
-    loadData();
+    await loadData();
   };
 
   // Lesson Handlers
@@ -206,8 +225,14 @@ export default function HRCoursePage() {
 
   const handleSaveLesson = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!lessonTitle.trim()) {
+      showToast('Lesson title is required', 'error');
+      return;
+    }
+
+    setIsSavingLesson(true);
     try {
-      await saveLesson({
+      const res = await saveLesson({
         id: editingLesson?.id,
         moduleId: selectedModuleId,
         title: lessonTitle,
@@ -216,11 +241,18 @@ export default function HRCoursePage() {
         videoUrl,
         pdfUrl,
       });
-      showToast(editingLesson ? 'Lesson updated!' : 'Lesson created!', 'success');
-      setLessonModalOpen(false);
-      loadData();
+
+      if (res && res.success) {
+        showToast(editingLesson ? 'Lesson updated successfully!' : 'Lesson created successfully!', 'success');
+        setLessonModalOpen(false);
+        await loadData();
+      } else {
+        showToast(res?.error || 'Failed to save lesson.', 'error');
+      }
     } catch (err: any) {
-      showToast('Failed to save lesson', 'error');
+      showToast(err.message || 'Failed to save lesson', 'error');
+    } finally {
+      setIsSavingLesson(false);
     }
   };
 
@@ -296,8 +328,8 @@ export default function HRCoursePage() {
     return <LearningCenterSkeleton />;
   }
 
-  const commonModules = course?.modules?.filter((m: any) => m.moduleType === 'COMMON') || [];
-  const deptModules = course?.modules?.filter((m: any) => m.moduleType === 'DEPARTMENT') || [];
+  const commonModules = course?.modules?.filter((m: any) => m.moduleType?.toUpperCase() === 'COMMON') || [];
+  const deptModules = course?.modules?.filter((m: any) => m.moduleType?.toUpperCase() === 'DEPARTMENT') || [];
   const totalLessons = course?.modules?.reduce((acc: number, m: any) => acc + m.lessons.length, 0) || 0;
 
   return (
@@ -627,8 +659,8 @@ export default function HRCoursePage() {
             <Button type="button" variant="ghost" onClick={() => setModuleModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
-              Save Module
+            <Button type="submit" variant="primary" disabled={isSavingModule}>
+              {isSavingModule ? 'Saving...' : 'Save Module'}
             </Button>
           </div>
         </form>
@@ -712,8 +744,8 @@ export default function HRCoursePage() {
             <Button type="button" variant="ghost" onClick={() => setLessonModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
-              Save Lesson
+            <Button type="submit" variant="primary" disabled={isSavingLesson}>
+              {isSavingLesson ? 'Saving...' : 'Save Lesson'}
             </Button>
           </div>
         </form>

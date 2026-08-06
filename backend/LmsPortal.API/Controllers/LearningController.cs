@@ -51,14 +51,14 @@ namespace LmsPortal.API.Controllers
             if (employee == null) return NotFound(new { success = false, message = "Employee profile not found." });
 
             var course = await _context.Courses
-                .Include(c => c.Modules.Where(m => !m.IsDeleted).OrderBy(m => m.SortOrder))
+                .Include(c => c.Modules)
                     .ThenInclude(m => m.TargetDepartment)
-                .Include(c => c.Modules.Where(m => !m.IsDeleted).OrderBy(m => m.SortOrder))
-                    .ThenInclude(m => m.Lessons.Where(l => !l.IsDeleted).OrderBy(l => l.SortOrder))
-                        .ThenInclude(l => l.Files.Where(f => !f.IsDeleted))
-                .Include(c => c.Assessments.Where(a => !a.IsDeleted))
-                    .ThenInclude(a => a.Questions.Where(q => !q.IsDeleted))
-                        .ThenInclude(q => q.Options.Where(o => !o.IsDeleted))
+                .Include(c => c.Modules)
+                    .ThenInclude(m => m.Lessons)
+                        .ThenInclude(l => l.Files)
+                .Include(c => c.Assessments)
+                    .ThenInclude(a => a.Questions)
+                        .ThenInclude(q => q.Options)
                 .FirstOrDefaultAsync(c => !c.IsDeleted);
 
             if (course == null) return Ok(new { success = true, data = (object?)null });
@@ -98,10 +98,15 @@ namespace LmsPortal.API.Controllers
             var certificate = await _context.Certificates
                 .FirstOrDefaultAsync(c => c.EmployeeId == employee.Id && !c.IsDeleted);
 
-            var filteredModules = course.Modules.Where(m =>
-                m.ModuleType == "COMMON" ||
-                (m.ModuleType == "DEPARTMENT" && m.TargetDepartmentId == employee.DepartmentId)
-            ).OrderBy(m => m.SortOrder).ToList();
+            var filteredModules = course.Modules
+                .Where(m => !m.IsDeleted && (
+                    string.Equals(m.ModuleType, "COMMON", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(m.ModuleType, "DEPARTMENT", StringComparison.OrdinalIgnoreCase) ||
+                    (string.Equals(m.ModuleType, "DEPARTMENT", StringComparison.OrdinalIgnoreCase) &&
+                        (!m.TargetDepartmentId.HasValue || m.TargetDepartmentId == employee.DepartmentId || employee.DepartmentId == 0))
+                ))
+                .OrderBy(m => m.SortOrder)
+                .ToList();
 
             // Calculate 7-Day Compliance Deadline Metrics
             var joiningDate = employee.JoiningDate;
@@ -145,7 +150,7 @@ namespace LmsPortal.API.Controllers
                         id = m.Id.ToString(),
                         title = m.Title,
                         description = m.Description,
-                        moduleType = m.ModuleType,
+                        moduleType = string.Equals(m.ModuleType, "DEPARTMENT", StringComparison.OrdinalIgnoreCase) ? "DEPARTMENT" : "COMMON",
                         departmentId = m.TargetDepartmentId?.ToString(),
                         department = m.TargetDepartment != null ? new
                         {
@@ -153,15 +158,17 @@ namespace LmsPortal.API.Controllers
                             name = m.TargetDepartment.DepartmentName
                         } : null,
                         sortOrder = m.SortOrder,
-                        lessons = m.Lessons.OrderBy(l => l.SortOrder).Select(l => new
+                        lessons = m.Lessons.Where(l => !l.IsDeleted).OrderBy(l => l.SortOrder).Select(l => new
                         {
                             id = l.Id.ToString(),
                             title = l.Title,
                             description = l.Description,
                             contentType = l.ContentType,
-                            videoUrl = l.Files.FirstOrDefault(f => f.FileType == "VIDEO")?.SharePointUrl,
-                            pdfUrl = l.Files.FirstOrDefault(f => f.FileType != "VIDEO")?.SharePointUrl,
-                            files = l.Files.OrderBy(f => f.DisplayOrder).Select(f => new
+                            videoUrl = l.Files.FirstOrDefault(f => !f.IsDeleted && string.Equals(f.FileType, "VIDEO", StringComparison.OrdinalIgnoreCase))?.SharePointUrl
+                                       ?? l.Files.FirstOrDefault(f => !f.IsDeleted)?.SharePointUrl,
+                            pdfUrl = l.Files.FirstOrDefault(f => !f.IsDeleted && !string.Equals(f.FileType, "VIDEO", StringComparison.OrdinalIgnoreCase))?.SharePointUrl
+                                     ?? l.Files.FirstOrDefault(f => !f.IsDeleted)?.SharePointUrl,
+                            files = l.Files.Where(f => !f.IsDeleted).OrderBy(f => f.DisplayOrder).Select(f => new
                             {
                                 id = f.Id.ToString(),
                                 fileName = f.FileName,

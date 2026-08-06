@@ -76,6 +76,46 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Run database auto-migrations at startup
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
+        string[] alterStatements = new[]
+        {
+            "ALTER TABLE lms.Courses ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE lms.Courses ADD IsPublished BIT NOT NULL DEFAULT 1;",
+            "ALTER TABLE Courses ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE Courses ADD IsPublished BIT NOT NULL DEFAULT 1;",
+            "ALTER TABLE lms.Modules ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE Modules ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE lms.Lessons ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE Lessons ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE eval.Assessments ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE eval.Assessments ADD IsPublished BIT NOT NULL DEFAULT 1;",
+            "ALTER TABLE Assessments ADD Description NVARCHAR(MAX) NULL;",
+            "ALTER TABLE Assessments ADD IsPublished BIT NOT NULL DEFAULT 1;",
+            "ALTER TABLE cert.Certificates ADD GeneratedBy NVARCHAR(100) NOT NULL DEFAULT 'SYSTEM';",
+            "ALTER TABLE Certificates ADD GeneratedBy NVARCHAR(100) NOT NULL DEFAULT 'SYSTEM';",
+            "UPDATE lms.Modules SET ModuleType = 'COMMON' WHERE UPPER(ModuleType) = 'COMMON';",
+            "UPDATE lms.Modules SET ModuleType = 'DEPARTMENT' WHERE UPPER(ModuleType) = 'DEPARTMENT';"
+        };
+
+        foreach (var alterSql in alterStatements)
+        {
+            try { db.Database.ExecuteSqlRaw(alterSql); } catch { }
+        }
+
+        var gamificationService = scope.ServiceProvider.GetRequiredService<LmsPortal.API.Services.IGamificationService>();
+        await gamificationService.EnsureTablesExistAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error running startup database auto-migrations");
+    }
+}
+
 // Enable Swagger API Documentation UI for all environments
 app.UseSwagger();
 app.UseSwaggerUI(c => {

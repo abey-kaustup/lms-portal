@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LmsPortal.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+193745ead8931aaeba6b2f96f295915d6fd3dcab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e301f8e7a70a013b711d925020de4a4b5e19d007")]
 [assembly: System.Reflection.AssemblyProductAttribute("LmsPortal.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LmsPortal.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

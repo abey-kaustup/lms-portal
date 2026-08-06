@@ -67,19 +67,25 @@ function processLearningStateData(data: any, session: any) {
   let deptCompletedCount = 0;
 
   const processedModules = rawModules.map((m: any) => {
+    const rawType = String(m.moduleType || 'COMMON').toUpperCase();
+    const normalizedType = rawType === 'DEPARTMENT' ? 'DEPARTMENT' : 'COMMON';
+
     const lessons = (m.lessons || []).map((l: any) => {
       const isCompleted = completedLessonIds.has(String(l.id));
-      if (m.moduleType === 'COMMON') {
+      if (normalizedType === 'COMMON') {
         commonLessonsCount++;
         if (isCompleted) commonCompletedCount++;
       } else {
         deptLessonsCount++;
         if (isCompleted) deptCompletedCount++;
       }
+      const fileUrl = l.files?.[0]?.sharePointUrl || l.files?.[0]?.fileUrl || '';
       return {
         ...l,
         id: String(l.id),
         isCompleted,
+        videoUrl: l.videoUrl || fileUrl,
+        pdfUrl: l.pdfUrl || fileUrl,
       };
     });
 
@@ -87,6 +93,7 @@ function processLearningStateData(data: any, session: any) {
     return {
       ...m,
       id: String(m.id),
+      moduleType: normalizedType,
       lessons,
       isCompleted: isModuleCompleted,
       isUnlocked: true,
